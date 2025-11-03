@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จัดการท่าออกกำลังกาย - Belly Reset</title>
+
+  <script>
+    if (sessionStorage.getItem("loggedIn") !== "true") {
+      window.location.href = "login.html";
+    }
+  </script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+  <script src="firebaseConfig.js"></script>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 280px;
+      height: 100vh;
+      background: linear-gradient(180deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
+      backdrop-filter: blur(20px);
+      box-shadow: 4px 0 30px rgba(0, 0, 0, 0.3);
+      padding: 30px 0;
+      z-index: 1000;
+      transition: transform 0.3s ease;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar-header {
+      padding: 0 30px 30px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+
+    .logo-icon {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .logo-icon i { font-size: 24px; color: #fff; }
+    .logo-text h3 { font-size: 20px; font-weight: 700; color: #fff; margin: 0; }
+    .logo-text p { font-size: 12px; color: #00d4ff; margin: 0; }
+    .sidebar-nav { padding: 20px 0; }
+    .nav-item { margin: 0 15px 8px; }
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      border-radius: 12px;
+      transition: all 0.3s;
+      font-weight: 500;
+      font-size: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+    .nav-link::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 3px;
+      background: linear-gradient(180deg, #00d4ff 0%, #0099ff 100%);
+      transform: scaleY(0);
+      transition: transform 0.3s;
+    }
+    .nav-link:hover::before,
+    .nav-link.active::before {
+      transform: scaleY(1);
+    }
+    .nav-link i { font-size: 20px; width: 24px; text-align: center; }
+    .nav-link:hover {
+      background: rgba(0, 212, 255, 0.1);
+      color: #00d4ff;
+      transform: translateX(5px);
+    }
+    .nav-link.active {
+      background: linear-gradient(90deg, rgba(0, 212, 255, 0.2) 0%, rgba(0, 153, 255, 0.1) 100%);
+      color: #00d4ff;
+    }
+    .nav-link.logout { color: #ff4757; }
+    .nav-link.logout:hover { background: rgba(255, 71, 87, 0.1); color: #ff6b7a; }
+
+    .main-content {
+      margin-left: 280px;
+      padding: 30px;
+      min-height: 100vh;
+    }
+
+    .top-bar {
+      background: linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(22, 33, 62, 0.8) 100%);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 25px 35px;
+      margin-bottom: 30px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .page-title h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #fff;
+      margin: 0 0 5px 0;
+      background: linear-gradient(90deg, #00d4ff 0%, #0099ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .page-title p { color: rgba(255, 255, 255, 0.6); margin: 0; font-size: 14px; }
+
+    .btn-add-new {
+      background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 28px;
+      font-weight: 600;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s;
+      box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .btn-add-new:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 30px rgba(0, 212, 255, 0.4);
+      color: #fff;
+    }
+
+    .filter-section {
+      background: linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(22, 33, 62, 0.8) 100%);
+      backdrop-filter: blur(20px);
+      padding: 24px;
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      margin-bottom: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .filter-row { display: flex; gap: 16px; flex-wrap: wrap; }
+    .filter-group { flex: 1; min-width: 200px; }
+
+    .form-label {
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+    }
+    .required { color: #ff6b6b; }
+    .form-control, .form-select, .form-control[type=file], textarea.form-control {
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      transition: all 0.3s;
+      background: rgba(0, 0, 0, 0.2);
+      color: #fff;
+      font-size: 15px;
+    }
+    .form-control:focus, .form-select:focus, textarea.form-control:focus {
+      border-color: #00d4ff;
+      box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2);
+      background: rgba(0, 0, 0, 0.3);
+      color: #fff;
+      outline: none;
+    }
+    .form-control::placeholder, textarea.form-control::placeholder { color: rgba(255, 255, 255, 0.4); }
+    .form-select option { background: #1a1a2e; color: #fff; }
+    .form-text {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.5);
+      margin-top: 5px;
+    }
+    .invalid-feedback {
+      display: none;
+      color: #ff6b6b;
+      font-size: 13px;
+      margin-top: 5px;
+    }
+    .form-control.is-invalid, textarea.form-control.is-invalid, .form-select.is-invalid {
+      border-color: #ff6b6b;
+    }
+    .form-control.is-invalid ~ .invalid-feedback,
+    textarea.form-control.is-invalid ~ .invalid-feedback,
+    .form-select.is-invalid ~ .invalid-feedback {
+      display: block;
+    }
+
+    .image-upload-wrapper {
+      border: 2px dashed rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      transition: all 0.3s;
+      cursor: pointer;
+      background: rgba(0, 0, 0, 0.2);
+    }
+    .image-upload-wrapper:hover {
+      border-color: #00d4ff;
+      background: rgba(0, 212, 255, 0.05);
+    }
+    .image-upload-wrapper.has-image {
+      padding: 0;
+      border: 2px solid rgba(0, 212, 255, 0.5);
+    }
+    .image-preview {
+      width: 100%;
+      max-height: 300px;
+      object-fit: cover;
+      border-radius: 10px;
+      display: none;
+    }
+    .image-preview.show {
+      display: block;
+    }
+    .upload-placeholder {
+      padding: 40px 20px;
+    }
+    .upload-placeholder i {
+      font-size: 48px;
+      color: rgba(255, 255, 255, 0.3);
+      margin-bottom: 16px;
+    }
+    .upload-placeholder p {
+      color: rgba(255, 255, 255, 0.5);
+      margin: 0;
+    }
+    .upload-progress {
+      display: none;
+      margin-top: 10px;
+    }
+    .upload-progress.show {
+      display: block;
+    }
+    .progress {
+      height: 10px;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    .progress-bar {
+      background-color: #00d4ff;
+    }
+
+    .exercise-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 24px;
+    }
+    .exercise-card {
+      background: linear-gradient(135deg, rgba(26, 26, 46, 0.9) 0%, rgba(22, 33, 62, 0.9) 100%);
+      backdrop-filter: blur(15px);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .exercise-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+      border-color: #00d4ff;
+    }
+    .exercise-image-wrapper {
+      position: relative;
+      width: 100%;
+      height: 200px;
+      overflow: hidden;
+      background: linear-gradient(135deg, #0f3460, #16213e);
+      cursor: pointer;
+    }
+    .exercise-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s;
+      opacity: 0.9;
+    }
+    .exercise-card:hover img { transform: scale(1.1); opacity: 1; }
+    .category-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255, 255, 255, 0.95);
+      color: #16213e;
+      padding: 6px 14px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .exercise-body { padding: 20px; }
+    .exercise-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 12px;
+    }
+    .info-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .info-badge {
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .badge-primary { background: #dbeafe; color: #1e40af; }
+    .badge-warning { background: #fef3c7; color: #92400e; }
+    .badge-success { background: #d1fae5; color: #065f46; }
+    .badge-info { background: #e0e7ff; color: #3730a3; }
+
+    .card-actions { display: flex; gap: 10px; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
+    .btn-edit, .btn-delete {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn-edit { background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1e40af; }
+    .btn-edit:hover { background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; }
+    .btn-delete { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #b91c1c; }
+    .btn-delete:hover { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; }
+
+    .modal-content {
+      background: #1a1a2e;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+    }
+    .modal-header {
+      background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+      color: white;
+      border-bottom: none;
+      border-radius: 16px 16px 0 0;
+    }
+    .modal-header .btn-close { filter: brightness(0) invert(1); }
+    .modal-body { color: rgba(255, 255, 255, 0.7); }
+    .modal-footer { border-top: 1px solid rgba(255, 255, 255, 0.1); }
+    .modal-footer .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #fff;
+    }
+    .modal-footer .btn-success {
+      background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+      border: none;
+      box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      background: linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(22, 33, 62, 0.8) 100%);
+      border-radius: 20px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      color: rgba(255, 255, 255, 0.5);
+    }
+    .empty-state i { font-size: 64px; color: rgba(255, 255, 255, 0.3); margin-bottom: 16px; }
+    .loading-state {
+      padding: 40px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.4);
+    }
+    .loading {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      border: 3px solid rgba(0, 212, 255, 0.2);
+      border-radius: 50%;
+      border-top-color: #00d4ff;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .mobile-toggle {
+      display: none;
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+      border-radius: 50%;
+      border: none;
+      color: #fff;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
+      z-index: 1001;
+      transition: all 0.3s;
+    }
+    .mobile-toggle:hover { transform: scale(1.1); }
+
+    .alert-info {
+      background: rgba(0, 212, 255, 0.1) !important;
+      border: 1px solid rgba(0, 212, 255, 0.3) !important;
+      color: rgba(255,255,255,0.8) !important;
+    }
+
+    .alert-warning {
+      background: rgba(255, 193, 7, 0.1) !important;
+      border: 1px solid rgba(255, 193, 7, 0.3) !important;
+      color: rgba(255, 255, 255, 0.9) !important;
+    }
+
+    @media (max-width: 968px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.active { transform: translateX(0); }
+      .main-content { margin-left: 0; padding: 20px; }
+      .mobile-toggle { display: flex; align-items: center; justify-content: center; }
+      .top-bar { flex-direction: column; gap: 15px; text-align: center; }
+    }
+    @media (max-width: 768px) {
+      .exercise-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-section">
+        <div class="logo-icon">
+          <i class="bi bi-heart-pulse"></i>
+        </div>
+        <div class="logo-text">
+          <h3>Belly Reset</h3>
+          <p>Admin Panel</p>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-item">
+        <a href="dashboard.html" class="nav-link">
+          <i class="bi bi-speedometer2"></i>
+          <span>Dashboard</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="admin_management.html" class="nav-link">
+          <i class="bi bi-person-badge"></i>
+          <span>จัดการบัญชีแอดมิน</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="manage_users.html" class="nav-link">
+          <i class="bi bi-people"></i>
+          <span>จัดการข้อมูลผู้ใช้</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="articles.html" class="nav-link">
+          <i class="bi bi-file-text"></i>
+          <span>จัดการคอนเทนต์</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="excerise_set.html" class="nav-link active">
+          <i class="bi bi-plus-square-dotted"></i>
+          <span>เพิ่มท่าออกกำลังกาย</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="#" class="nav-link logout" onclick="logout()">
+          <i class="bi bi-box-arrow-right"></i>
+          <span>ออกจากระบบ</span>
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <div class="main-content">
+    <div class="top-bar">
+      <div class="page-title">
+        <h1>เพิ่มท่าออกกำลังกาย</h1>
+        <p>เพิ่ม แก้ไข และลบข้อมูลท่าออกกำลังกายสำหรับแอป</p>
+      </div>
+      <button class="btn-add-new" onclick="openAddModal()">
+        <i class="bi bi-plus-circle-fill"></i>
+        เพิ่มท่าใหม่
+      </button>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label class="form-label">
+            <i class="bi bi-search"></i> ค้นหา
+          </label>
+          <input type="text" id="searchInput" class="form-control" placeholder="ค้นหาชื่อท่า..." oninput="filterExercises()">
+        </div>
+        <div class="filter-group">
+          <label class="form-label">
+            <i class="bi bi-tags"></i> หมวดหมู่
+          </label>
+          <select id="categoryFilter" class="form-select" onchange="filterExercises()">
+            <option value="">ทั้งหมด</option>
+            <option value="คาร์ดิโอ">🏃‍♀️ คาร์ดิโอ</option>
+            <option value="เวทเทรนนิ่ง">🏋️‍♂️ เวทเทรนนิ่ง</option>
+            <option value="ยืดกล้ามเนื้อ">🤸‍♂️ ยืดกล้ามเนื้อ</option>
+            <option value="โยคะ">🧘‍♀️ โยคะ</option>
+            <option value="HIIT">🔥 HIIT</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="exerciseList" class="exercise-grid">
+      <div class="loading-state">
+        <span class="loading"></span>
+        <p>กำลังโหลดข้อมูล...</p>
+      </div>
+    </div>
+  </div>
+
+  <button class="mobile-toggle" onclick="toggleSidebar()">
+    <i class="bi bi-list"></i>
+  </button>
+
+  <!-- Modal -->
+  <div class="modal fade" id="exerciseModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitle">
+            <i class="bi bi-plus-circle"></i> เพิ่มท่าออกกำลังกาย
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editingId">
+          <input type="hidden" id="currentImageUrl">
+
+          <div class="row g-3">
+            <!-- รูปภาพ -->
+            <div class="col-12">
+              <label class="form-label">
+                <i class="bi bi-image"></i> รูปภาพท่าออกกำลังกาย <span class="required">*</span>
+              </label>
+              <div class="image-upload-wrapper" id="imageUploadWrapper" onclick="document.getElementById('imageInput').click()">
+                <input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageSelect(event)">
+                <div class="upload-placeholder" id="uploadPlaceholder">
+                  <i class="bi bi-cloud-upload"></i>
+                  <p>คลิกเพื่ออัปโหลดรูปภาพ</p>
+                  <small>รองรับไฟล์: JPG, PNG, WEBP (ขนาดแนะนำ 800x600px)</small>
+                </div>
+                <img id="imagePreview" class="image-preview" alt="Preview">
+              </div>
+              <div class="upload-progress" id="uploadProgress">
+                <div class="progress">
+                  <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" id="progressBar" style="width: 0%"></div>
+                </div>
+                <small id="progressText" class="text-muted">กำลังอัปโหลด...</small>
+              </div>
+            </div>
+
+            <!-- ชื่อท่า -->
+            <div class="col-12">
+              <label class="form-label">
+                <i class="bi bi-card-heading"></i> ชื่อท่า <span class="required">*</span>
+              </label>
+              <input type="text" id="exerciseName" class="form-control" placeholder="เช่น Jumping Jack, Plank">
+            </div>
+
+            <!-- หมวดหมู่ -->
+            <div class="col-md-6">
+              <label class="form-label">
+                <i class="bi bi-tags"></i> หมวดหมู่ <span class="required">*</span>
+              </label>
+              <select id="exerciseCategory" class="form-select">
+                <option value="">เลือกหมวดหมู่</option>
+                <option value="คาร์ดิโอ">🏃‍♀️ คาร์ดิโอ</option>
+                <option value="เวทเทรนนิ่ง">🏋️‍♂️ เวทเทรนนิ่ง</option>
+                <option value="ยืดกล้ามเนื้อ">🤸‍♂️ ยืดกล้ามเนื้อ</option>
+                <option value="โยคะ">🧘‍♀️ โยคะ</option>
+                <option value="HIIT">🔥 HIIT</option>
+              </select>
+            </div>
+
+            <!-- ประเภทการนับ -->
+            <div class="col-md-6">
+              <label class="form-label">
+                <i class="bi bi-calculator"></i> ประเภทการนับ <span class="required">*</span>
+              </label>
+              <select id="inputType" class="form-select">
+                <option value="">เลือกประเภท</option>
+                <option value="time">⏱️ นับเวลา (Plank, Yoga)</option>
+                <option value="reps">🔢 นับครั้ง (Push Up, Sit Up)</option>
+                <option value="steps">👣 นับก้าว (Walking, Running)</option>
+              </select>
+            </div>
+
+            <!-- หน่วยนับ -->
+            <div class="col-md-4">
+              <label class="form-label">
+                <i class="bi bi-tag"></i> หน่วยนับ <span class="required">*</span>
+              </label>
+              <input type="text" id="unit" class="form-control" placeholder="เช่น นาที, ครั้ง, ก้าว">
+            </div>
+
+            <!-- ค่า MET -->
+            <div class="col-md-4">
+              <label class="form-label">
+                <i class="bi bi-lightning-charge"></i> ค่า MET <span class="required">*</span>
+              </label>
+              <input type="number" step="0.1" id="metValue" class="form-control" placeholder="เช่น 3.5, 4.0">
+              <small class="form-text">ค่าพลังงานที่ใช้ในการออกกำลังกาย</small>
+            </div>
+
+            <!-- อัตราแปลง -->
+            <div class="col-md-4">
+              <label class="form-label">
+                <i class="bi bi-arrow-repeat"></i> อัตราแปลง (ต่อ 1 นาที) <span class="required">*</span>
+              </label>
+              <input type="number" step="0.1" id="conversionRate" class="form-control" placeholder="เช่น 1, 10, 100">
+              <small class="form-text">ครั้ง/ก้าว/นาที (ใส่ 1 ถ้านับเวลา)</small>
+            </div>
+
+            <!-- สูตรคำนวณแคลอรี่ -->
+            <div class="col-12">
+              <label class="form-label">
+                <i class="bi bi-calculator-fill"></i> สูตรคำนวณแคลอรี่ <span class="required">*</span>
+              </label>
+              <select id="formulaType" class="form-select" onchange="updateFormulaPreview()">
+                <option value="">-- เลือกสูตรคำนวณ --</option>
+                <option value="time_based">⏱️ แบบนับเวลา: MET × น้ำหนัก × (เวลา/60)</option>
+                <option value="reps_based">🔢 แบบนับครั้ง: MET × น้ำหนัก × (ครั้ง/(อัตรา×60))</option>
+                <option value="steps_based">👣 แบบนับก้าว: MET × น้ำหนัก × (ก้าว/(อัตรา×60))</option>
+              </select>
+              
+              <!-- แสดงตัวอย่างสูตร -->
+              <div id="formulaPreview" class="form-text" style="margin-top: 10px; padding: 12px; background: rgba(0, 212, 255, 0.1); border-radius: 8px; border-left: 3px solid #00d4ff; display: none;">
+                <strong style="color: #00d4ff;"><i class="bi bi-lightbulb"></i> สูตรที่จะใช้:</strong>
+                <code id="formulaDisplay" style="display: block; margin-top: 8px; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 5px; color: #00d4ff; font-size: 13px;"></code>
+                <small id="formulaExample" style="display: block; margin-top: 8px; color: rgba(255,255,255,0.7); line-height: 1.5;"></small>
+              </div>
+              
+              <div class="invalid-feedback" id="formulaTypeError">กรุณาเลือกสูตรคำนวณ</div>
+            </div>
+
+            <!-- คำอธิบาย -->
+            <div class="col-12">
+              <div class="alert alert-info" style="margin-bottom: 0;">
+                <i class="bi bi-info-circle"></i> <strong>คำแนะนำการเลือกสูตร:</strong>
+                <ul style="margin: 10px 0 0 0; padding-left: 20px; font-size: 13px;">
+                  <li><strong>แบบนับเวลา:</strong> ใช้กับท่าที่วัดเป็นนาที/วินาที (Plank, Yoga, Cycling) - ตั้งอัตราแปลง = 1</li>
+                  <li><strong>แบบนับครั้ง:</strong> ใช้กับท่าที่นับจำนวนครั้ง (Push Up, Sit Up, Squat) - ระบุอัตราครั้ง/นาทีที่ปกติทำได้</li>
+                  <li><strong>แบบนับก้าว:</strong> ใช้กับท่าที่นับก้าว (Walking, Running, Jogging) - ระบุอัตราก้าว/นาทีเฉลี่ย</li>
+                </ul>
+              </div>
+            </div>
+
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+            <i class="bi bi-x-circle"></i> ยกเลิก
+          </button>
+          <button type="button" class="btn btn-success" onclick="saveExercise()">
+            <i class="bi bi-check-circle"></i> บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let allExercises = [];
+    let selectedImageFile = null;
+
+    // ==================== Cloudinary Configuration (เหมือน articles.html) ====================
+    const cloudName = "dxnxsyduc";
+    const uploadPreset = "unsigned_preset";
+
+    // ==================== Image Handling ====================
+    function handleImageSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      if (!file.type.startsWith('image/')) {
+        alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+        return;
+      }
+      
+      if (file.size > 5 * 1024 * 1024) {
+        alert('ขนาดไฟล์ต้องไม่เกิน 5MB');
+        return;
+      }
+      
+      selectedImageFile = file;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const preview = document.getElementById('imagePreview');
+        const placeholder = document.getElementById('uploadPlaceholder');
+        const wrapper = document.getElementById('imageUploadWrapper');
+        preview.src = e.target.result;
+        preview.classList.add('show');
+        placeholder.style.display = 'none';
+        wrapper.classList.add('has-image');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ฟังก์ชันแสดงตัวอย่างรูปภาพ (สำหรับ modal)
+    function previewImage(event) {
+      handleImageSelect(event);
+    }
+
+    // ==================== Upload Image to Cloudinary (เหมือน articles.html) ====================
+    async function uploadImage(file) {
+      if (!file) return null;
+
+      const progressBar = document.getElementById('progressBar');
+      const progressText = document.getElementById('progressText');
+      const progressWrapper = document.getElementById('uploadProgress');
+      
+      progressWrapper.classList.add('show');
+      progressBar.style.width = '0%';
+
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', uploadPreset);
+
+      try {
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error('อัปโหลดรูปภาพล้มเหลว');
+        }
+
+        const data = await response.json();
+        
+        progressWrapper.classList.remove('show');
+        progressBar.style.width = '0%';
+        
+        console.log('✅ Upload สำเร็จ:', data.secure_url);
+        return data.secure_url;
+
+      } catch (error) {
+        progressWrapper.classList.remove('show');
+        progressBar.style.width = '0%';
+        console.error("Cloudinary Upload Error:", error);
+        throw error;
+      }
+    }
+
+    // ==================== Formula Preview ====================
+    function updateFormulaPreview() {
+      const formulaType = document.getElementById('formulaType').value;
+      const previewDiv = document.getElementById('formulaPreview');
+      const formulaDisplay = document.getElementById('formulaDisplay');
+      const formulaExample = document.getElementById('formulaExample');
+      
+      if (!formulaType) {
+        previewDiv.style.display = 'none';
+        return;
+      }
+      
+      previewDiv.style.display = 'block';
+      
+      switch(formulaType) {
+        case 'time_based':
+          formulaDisplay.textContent = 'แคลอรี่ = MET × น้ำหนัก × (เวลาที่ออกกำลังกาย ÷ 60)';
+          formulaExample.innerHTML = '<strong>ตัวอย่าง:</strong> Plank 5 นาที, MET=3.5, น้ำหนัก 70 กก.<br>→ 3.5 × 70 × (5 ÷ 60) = <strong style="color: #00d4ff;">20.4 แคลอรี่</strong>';
+          break;
+          
+        case 'reps_based':
+          formulaDisplay.textContent = 'แคลอรี่ = MET × น้ำหนัก × (จำนวนครั้ง ÷ (อัตราครั้ง/นาที × 60))';
+          formulaExample.innerHTML = '<strong>ตัวอย่าง:</strong> Push Up 50 ครั้ง, MET=4.0, อัตรา 20 ครั้ง/นาที, น้ำหนัก 70 กก.<br>→ 4.0 × 70 × (50 ÷ (20 × 60)) = <strong style="color: #00d4ff;">11.7 แคลอรี่</strong>';
+          break;
+          
+        case 'steps_based':
+          formulaDisplay.textContent = 'แคลอรี่ = MET × น้ำหนัก × (จำนวนก้าว ÷ (อัตราก้าว/นาที × 60))';
+          formulaExample.innerHTML = '<strong>ตัวอย่าง:</strong> เดิน 1000 ก้าว, MET=3.3, อัตรา 100 ก้าว/นาที, น้ำหนัก 70 กก.<br>→ 3.3 × 70 × (1000 ÷ (100 × 60)) = <strong style="color: #00d4ff;">38.5 แคลอรี่</strong>';
+          break;
+      }
+    }
+
+    // ==================== Load & Display Exercises ====================
+    async function loadExercises() {
+      const container = document.getElementById('exerciseList');
+      container.innerHTML = `
+        <div class="loading-state">
+          <span class="loading"></span>
+          <p>กำลังโหลดข้อมูล...</p>
+        </div>`;
+      try {
+        const snapshot = await db.collection('exercise_set').orderBy('name').get();
+        allExercises = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        displayExercises(allExercises);
+      } catch (error) {
+        console.error('Error loading exercises:', error);
+        container.innerHTML = '<div class="alert alert-danger">เกิดข้อผิดพลาดในการโหลดข้อมูล: ' + error.message + '</div>';
+      }
+    }
+
+    function displayExercises(exercises) {
+      const container = document.getElementById('exerciseList');
+      if (exercises.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <h3>ยังไม่มีท่าออกกำลังกาย</h3>
+            <p>เริ่มต้นเพิ่มท่าแรกของคุณโดยคลิกปุ่ม "เพิ่มท่าใหม่"</p>
+          </div>
+        `;
+        return;
+      }
+      container.innerHTML = '';
+      exercises.forEach(ex => {
+        const card = document.createElement('div');
+        card.className = 'exercise-card';
+        const imageUrl = ex.imageUrl || 'https://via.placeholder.com/400x300?text=No+Image';
+        
+        card.innerHTML = `
+          <div class="exercise-image-wrapper">
+            <img src="${imageUrl}" alt="${ex.name}" onerror="this.onerror=null; this.src='https://via.placeholder.com/400x300?text=Image+Error'">
+            <div class="category-badge">${ex.category || 'ทั่วไป'}</div>
+          </div>
+          <div class="exercise-body">
+            <h5 class="exercise-title">${ex.name || 'ไม่มีชื่อ'}</h5>
+            
+            <div class="info-badges">
+              ${ex.inputType ? `<span class="info-badge badge-info"><i class="bi bi-calculator"></i> ${ex.inputType === 'time' ? 'นับเวลา' : ex.inputType === 'steps' ? 'นับก้าว' : 'นับครั้ง'}</span>` : ''}
+              ${ex.unit ? `<span class="info-badge badge-success"><i class="bi bi-tag"></i> ${ex.unit}</span>` : ''}
+              ${ex.metValue ? `<span class="info-badge badge-warning"><i class="bi bi-lightning-charge"></i> MET: ${ex.metValue}</span>` : ''}
+              ${ex.conversionRate && ex.conversionRate !== 1 ? `<span class="info-badge badge-primary"><i class="bi bi-arrow-repeat"></i> Rate: ${ex.conversionRate}</span>` : ''}
+            </div>
+            
+            ${ex.formulaDescription ? `
+              <div style="font-size: 11px; color: rgba(255,255,255,0.6); margin: 10px 0; padding: 8px; background: rgba(0,212,255,0.1); border-left: 3px solid #00d4ff; border-radius: 5px;">
+                <strong style="color: #00d4ff;">📐 สูตร:</strong> ${ex.formulaDescription}
+              </div>
+            ` : ''}
+            
+            ${ex.exerciseFormula ? `
+              <div style="font-size: 10px; color: rgba(255,255,255,0.4); margin-bottom: 15px; font-family: monospace; background: rgba(0,0,0,0.3); padding: 5px 8px; border-radius: 5px;">
+                <code style="color: rgba(0,212,255,0.7);">${ex.exerciseFormula}</code>
+              </div>
+            ` : ''}
+            
+            <div class="card-actions">
+              <button class="btn-edit" onclick="editExercise('${ex.id}')">
+                <i class="bi bi-pencil"></i> แก้ไข
+              </button>
+              <button class="btn-delete" onclick="deleteExercise('${ex.id}')">
+                <i class="bi bi-trash"></i> ลบ
+              </button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // ==================== Filter ====================
+    function filterExercises() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const category = document.getElementById('categoryFilter').value;
+      let filtered = allExercises;
+      
+      if (search) {
+        filtered = filtered.filter(ex => (ex.name || '').toLowerCase().includes(search));
+      }
+      if (category) {
+        filtered = filtered.filter(ex => ex.category === category);
+      }
+      
+      displayExercises(filtered);
+    }
+
+    // ==================== Modal Functions ====================
+    function openAddModal() {
+      document.getElementById('modalTitle').innerHTML = '<i class="bi bi-plus-circle"></i> เพิ่มท่าออกกำลังกาย';
+      document.getElementById('editingId').value = '';
+      document.getElementById('currentImageUrl').value = '';
+      document.getElementById('exerciseName').value = '';
+      document.getElementById('exerciseCategory').value = '';
+      document.getElementById('inputType').value = '';
+      document.getElementById('unit').value = '';
+      document.getElementById('metValue').value = '';
+      document.getElementById('conversionRate').value = '';
+      document.getElementById('formulaType').value = '';
+      document.getElementById('formulaTypeError').style.display = 'none';
+      document.getElementById('formulaType').classList.remove('is-invalid');
+      document.getElementById('formulaPreview').style.display = 'none';
+
+      selectedImageFile = null;
+      document.getElementById('imageInput').value = '';
+      const preview = document.getElementById('imagePreview');
+      const placeholder = document.getElementById('uploadPlaceholder');
+      const wrapper = document.getElementById('imageUploadWrapper');
+      preview.src = '';
+      preview.classList.remove('show');
+      placeholder.style.display = 'block';
+      wrapper.classList.remove('has-image');
+      document.getElementById('uploadProgress').classList.remove('show');
+
+      new bootstrap.Modal(document.getElementById('exerciseModal')).show();
+    }
+
+    async function saveExercise() {
+      const id = document.getElementById('editingId').value;
+      const currentImageUrl = document.getElementById('currentImageUrl').value;
+      const name = document.getElementById('exerciseName').value.trim();
+      const category = document.getElementById('exerciseCategory').value;
+      const inputType = document.getElementById('inputType').value;
+      const unit = document.getElementById('unit').value.trim();
+      const metValue = parseFloat(document.getElementById('metValue').value) || 0;
+      const conversionRate = parseFloat(document.getElementById('conversionRate').value) || 1;
+      const formulaType = document.getElementById('formulaType').value;
+
+      // Validation
+      let isValid = true;
+      const formulaSelect = document.getElementById('formulaType');
+      const formulaError = document.getElementById('formulaTypeError');
+
+      if (!name || !category || !inputType || !unit || !formulaType) {
+        alert('❌ กรุณากรอกข้อมูลให้ครบถ้วน!\n\nข้อมูลที่จำเป็น:\n- ชื่อท่า\n- หมวดหมู่\n- ประเภทการนับ\n- หน่วยนับ\n- สูตรคำนวณ');
+        isValid = false;
+        if (!formulaType) {
+          formulaSelect.classList.add('is-invalid');
+          formulaError.style.display = 'block';
+        }
+      } else {
+        formulaSelect.classList.remove('is-invalid');
+        formulaError.style.display = 'none';
+      }
+
+      if (metValue <= 0) {
+        alert('❌ กรุณากรอกค่า MET ที่ถูกต้อง!\n\nค่า MET ต้องมากกว่า 0');
+        isValid = false;
+      }
+
+      if ((formulaType === 'reps_based' || formulaType === 'steps_based') && conversionRate <= 0) {
+        alert('❌ กรุณากรอกอัตราแปลงที่ถูกต้อง!\n\nอัตราแปลงต้องมากกว่า 0');
+        isValid = false;
+      }
+
+      if (!id && !selectedImageFile) {
+        alert('❌ กรุณาเลือกรูปภาพสำหรับท่าใหม่!');
+        isValid = false;
+      }
+
+      if (!isValid) return;
+
+      // Generate Formula
+      let generatedFormula = '';
+      let formulaDescription = '';
+      
+      switch(formulaType) {
+        case 'time_based':
+          generatedFormula = 'met * weight * (input / 60)';
+          formulaDescription = 'แบบนับเวลา: MET × น้ำหนัก × (เวลา/60)';
+          break;
+          
+        case 'reps_based':
+          generatedFormula = 'met * weight * (input / (rate * 60))';
+          formulaDescription = 'แบบนับครั้ง: MET × น้ำหนัก × (ครั้ง/(อัตรา×60))';
+          break;
+          
+        case 'steps_based':
+          generatedFormula = 'met * weight * (input / (rate * 60))';
+          formulaDescription = 'แบบนับก้าว: MET × น้ำหนัก × (ก้าว/(อัตรา×60))';
+          break;
+          
+        default:
+          alert('❌ ประเภทสูตรคำนวณไม่ถูกต้อง!');
+          return;
+      }
+
+      try {
+        let imageUrl = currentImageUrl;
+        if (selectedImageFile) {
+          try {
+            imageUrl = await uploadImage(selectedImageFile);
+            if (!imageUrl) {
+              throw new Error("ไม่สามารถอัปโหลดรูปภาพได้");
+            }
+          } catch (uploadError) {
+            alert('❌ เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ:\n\n' + uploadError.message);
+            return;
+          }
+        } else if (!id && !imageUrl) {
+          alert('❌ เกิดข้อผิดพลาด: ไม่พบ URL รูปภาพสำหรับรายการใหม่');
+          return;
+        }
+
+        const data = {
+          name,
+          category,
+          inputType,
+          unit,
+          metValue,
+          conversionRate,
+          imageUrl,
+          formulaType,
+          exerciseFormula: generatedFormula,
+          formulaDescription: formulaDescription,
+          updatedAt: new Date()
+        };
+
+        if (id) {
+          await db.collection('exercise_set').doc(id).update(data);
+          alert('✅ แก้ไขสำเร็จ!\n\n📝 ข้อมูล:\n- ชื่อท่า: ' + name + '\n- สูตร: ' + formulaDescription);
+        } else {
+          data.createdAt = new Date();
+          await db.collection('exercise_set').add(data);
+          alert('✅ เพิ่มท่าใหม่สำเร็จ!\n\n📝 ข้อมูล:\n- ชื่อท่า: ' + name + '\n- สูตร: ' + formulaDescription);
+        }
+
+        bootstrap.Modal.getInstance(document.getElementById('exerciseModal')).hide();
+        loadExercises();
+        
+      } catch (error) {
+        console.error('Error saving exercise:', error);
+        alert('❌ เกิดข้อผิดพลาดในการบันทึก!\n\n' + error.message + '\n\nกรุณาลองใหม่อีกครั้ง');
+      } finally {
+        selectedImageFile = null;
+        document.getElementById('imageInput').value = '';
+      }
+    }
+
+    async function editExercise(id) {
+      const ex = allExercises.find(e => e.id === id);
+      if (!ex) return;
+
+      document.getElementById('modalTitle').innerHTML = '<i class="bi bi-pencil"></i> แก้ไขท่าออกกำลังกาย';
+      document.getElementById('editingId').value = id;
+      document.getElementById('currentImageUrl').value = ex.imageUrl || '';
+      document.getElementById('exerciseName').value = ex.name || '';
+      document.getElementById('exerciseCategory').value = ex.category || '';
+      document.getElementById('inputType').value = ex.inputType || '';
+      document.getElementById('unit').value = ex.unit || '';
+      document.getElementById('metValue').value = ex.metValue || '';
+      document.getElementById('conversionRate').value = ex.conversionRate || 1;
+
+      const formulaSelect = document.getElementById('formulaType');
+      const formulaError = document.getElementById('formulaTypeError');
+      
+      if (ex.formulaType) {
+        formulaSelect.value = ex.formulaType;
+      } else {
+        let formulaTypeToSet = '';
+        if (ex.inputType === 'time') formulaTypeToSet = 'time_based';
+        else if (ex.inputType === 'reps') formulaTypeToSet = 'reps_based';
+        else if (ex.inputType === 'steps') formulaTypeToSet = 'steps_based';
+        formulaSelect.value = formulaTypeToSet;
+      }
+      
+      updateFormulaPreview();
+      formulaError.style.display = 'none';
+      formulaSelect.classList.remove('is-invalid');
+
+      const preview = document.getElementById('imagePreview');
+      const placeholder = document.getElementById('uploadPlaceholder');
+      const wrapper = document.getElementById('imageUploadWrapper');
+      
+      if (ex.imageUrl) {
+        preview.src = ex.imageUrl;
+        preview.classList.add('show');
+        placeholder.style.display = 'none';
+        wrapper.classList.add('has-image');
+      } else {
+        preview.src = '';
+        preview.classList.remove('show');
+        placeholder.style.display = 'block';
+        wrapper.classList.remove('has-image');
+      }
+
+      selectedImageFile = null;
+      document.getElementById('imageInput').value = '';
+      document.getElementById('uploadProgress').classList.remove('show');
+
+      new bootstrap.Modal(document.getElementById('exerciseModal')).show();
+    }
+
+    async function deleteExercise(id) {
+      if (!confirm('⚠️ ต้องการลบท่านี้หรือไม่?\n\nการกระทำนี้ไม่สามารถย้อนกลับได้')) return;
+      
+      try {
+        await db.collection('exercise_set').doc(id).delete();
+        alert('✅ ลบข้อมูลสำเร็จ!');
+        loadExercises();
+      } catch (error) {
+        console.error('Error deleting exercise:', error);
+        alert('❌ เกิดข้อผิดพลาดในการลบข้อมูล!\n\n' + error.message);
+      }
+    }
+
+    // ==================== Utility Functions ====================
+    function logout() {
+      if (confirm("ต้องการออกจากระบบหรือไม่?")) {
+        sessionStorage.removeItem("loggedIn");
+        window.location.href = "login.html";
+      }
+    }
+
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("active");
+    }
+
+    document.addEventListener('click', function(event) {
+      const sidebar = document.getElementById('sidebar');
+      const toggle = document.querySelector('.mobile-toggle');
+      if (window.innerWidth <= 968 && sidebar && toggle && 
+          !sidebar.contains(event.target) && !toggle.contains(event.target) && 
+          sidebar.classList.contains('active')) {
+        sidebar.classList.remove('active');
+      }
+    });
+
+    // ==================== Initialize ====================
+    window.addEventListener("DOMContentLoaded", () => {
+      loadExercises();
+    });
+  </script>
+
+</body>
+</html>

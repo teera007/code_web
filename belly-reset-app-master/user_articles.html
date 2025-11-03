@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>บทความสุขภาพ - Belly Reset</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+  <script src="firebaseConfig.js"></script>
+
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Prompt', 'Kanit', sans-serif;
+      background: #f5f9f7;
+      min-height: 100vh;
+      padding-bottom: 30px;
+    }
+
+    /* Smooth gradient background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 400px;
+      background: linear-gradient(180deg, #E8F5E9 0%, #f5f9f7 100%);
+      z-index: -1;
+    }
+
+    /* Header */
+    .header {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(20px);
+      padding: 20px 20px 16px;
+      box-shadow: 0 2px 20px rgba(46, 125, 50, 0.08);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid rgba(76, 175, 80, 0.1);
+    }
+
+    .header-content {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 1.4rem;
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.25);
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      color: #2E7D32;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: -0.5px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 24px 20px;
+    }
+
+    /* Search Box */
+    .search-wrapper {
+      margin-bottom: 24px;
+    }
+
+    .search-box {
+      background: white;
+      border-radius: 16px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 20px rgba(46, 125, 50, 0.08);
+      border: 2px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .search-box:focus-within {
+      border-color: #66BB6A;
+      box-shadow: 0 4px 24px rgba(102, 187, 106, 0.2);
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-family: 'Prompt', sans-serif;
+      font-size: 0.95rem;
+      color: #333;
+    }
+
+    .search-box input::placeholder {
+      color: #9E9E9E;
+    }
+
+    .search-box i {
+      color: #66BB6A;
+      font-size: 1.2rem;
+    }
+
+    /* Filter Tabs */
+    .filter-wrapper {
+      margin-bottom: 32px;
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding: 4px 0 8px;
+      scrollbar-width: none;
+    }
+
+    .filter-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .filter-tab {
+      background: white;
+      color: #66BB6A;
+      padding: 10px 20px;
+      border-radius: 12px;
+      white-space: nowrap;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: all 0.3s;
+      border: 2px solid #E8F5E9;
+      box-shadow: 0 2px 8px rgba(46, 125, 50, 0.05);
+    }
+
+    .filter-tab:hover {
+      background: #F1F8E9;
+      border-color: #C8E6C9;
+      transform: translateY(-2px);
+    }
+
+    .filter-tab.active {
+      background: linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%);
+      color: white;
+      border-color: #4CAF50;
+      box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3);
+      transform: translateY(-2px);
+    }
+
+    /* Section Title */
+    .section-title {
+      color: #2E7D32;
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin: 0 0 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      letter-spacing: -0.3px;
+    }
+
+    .section-title i {
+      font-size: 1.4rem;
+      color: #66BB6A;
+    }
+
+    .section-badge {
+      background: linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%);
+      color: white;
+      font-size: 0.7rem;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-weight: 600;
+      margin-left: auto;
+    }
+
+    /* Articles Grid */
+    .articles-grid {
+      display: grid;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    /* Featured Article (First Card) */
+    .article-card.featured {
+      background: white;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(46, 125, 50, 0.12);
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 8px;
+    }
+
+    .article-card.featured:active {
+      transform: scale(0.98);
+    }
+
+    .article-card.featured .article-image {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+    }
+
+    .article-card.featured .article-content {
+      padding: 24px;
+    }
+
+    .article-card.featured .article-title {
+      font-size: 1.35rem;
+      line-height: 1.4;
+      margin-bottom: 12px;
+      -webkit-line-clamp: 2;
+    }
+
+    /* Regular Article Card (Horizontal) */
+    .article-card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 16px rgba(46, 125, 50, 0.08);
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      height: 130px;
+      position: relative;
+      border: 1px solid rgba(200, 230, 201, 0.3);
+    }
+
+    .article-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 28px rgba(46, 125, 50, 0.16);
+      border-color: #C8E6C9;
+    }
+
+    .article-card:active {
+      transform: scale(0.98);
+    }
+
+    .article-image {
+      width: 130px;
+      height: 130px;
+      object-fit: cover;
+      background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+      flex-shrink: 0;
+    }
+
+    .article-content {
+      padding: 16px 18px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .article-category {
+      display: inline-block;
+      background: linear-gradient(135deg, #E8F5E9, #C8E6C9);
+      color: #2E7D32;
+      padding: 5px 12px;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      width: fit-content;
+      letter-spacing: 0.3px;
+    }
+
+    /* Category Colors */
+    .article-category.การออกกำลังกาย {
+      background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+      color: #E65100;
+    }
+
+    .article-category.สุขภาพจิต {
+      background: linear-gradient(135deg, #E1F5FE, #B3E5FC);
+      color: #01579B;
+    }
+
+    .article-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1B5E20;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+
+    .article-meta {
+      display: flex;
+      gap: 14px;
+      color: #81C784;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .article-meta i {
+      margin-right: 4px;
+      color: #66BB6A;
+    }
+
+    /* External Link Badge */
+    .external-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255, 255, 255, 0.95);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+      border: 2px solid #E8F5E9;
+    }
+
+    .external-badge i {
+      color: #66BB6A;
+      font-size: 0.85rem;
+    }
+
+    /* Loading & Empty States */
+    .loading-state, .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #81C784;
+    }
+
+    .loading-spinner {
+      width: 45px;
+      height: 45px;
+      border: 4px solid #E8F5E9;
+      border-top: 4px solid #66BB6A;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .empty-state i {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      opacity: 0.4;
+      color: #81C784;
+    }
+
+    .empty-state h3 {
+      font-size: 1.2rem;
+      color: #2E7D32;
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      color: #81C784;
+      font-size: 0.95rem;
+    }
+
+    /* Divider */
+    .section-divider {
+      height: 24px;
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .article-card {
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px 16px;
+      }
+
+      .header {
+        padding: 16px;
+      }
+
+      .header h1 {
+        font-size: 1.3rem;
+      }
+
+      .section-title {
+        font-size: 1.15rem;
+      }
+
+      .article-card {
+        height: 120px;
+      }
+
+      .article-image {
+        width: 120px;
+        height: 120px;
+      }
+
+      .article-card.featured .article-image {
+        height: 180px;
+      }
+
+      .article-content {
+        padding: 14px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="header-content">
+      <div class="header-icon">
+        <i class="bi bi-heart-pulse-fill"></i>
+      </div>
+      <h1>บทความสุขภาพ</h1>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Search Box -->
+    <div class="search-wrapper">
+      <div class="search-box">
+        <i class="bi bi-search"></i>
+        <input type="text" id="search-input" placeholder="ค้นหาบทความที่คุณสนใจ...">
+      </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-wrapper">
+      <div class="filter-tabs" id="filter-tabs">
+        <div class="filter-tab active" data-category="all">
+          <i class="bi bi-grid-fill"></i> ทั้งหมด
+        </div>
+      </div>
+    </div>
+
+    <!-- Firebase Articles Section -->
+    <div class="section-title">
+      <i class="bi bi-heart-pulse-fill"></i>
+      จาก Belly Reset
+      <span class="section-badge">แนะนำ</span>
+    </div>
+    <div id="firebase-articles" class="articles-grid">
+      <div class="loading-state">
+        <div class="loading-spinner"></div>
+        <p>กำลังโหลดบทความ...</p>
+      </div>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- External Articles Section -->
+    <div class="section-title">
+      <i class="bi bi-stars"></i>
+      บทความอื่นๆ ที่น่าสนใจ
+    </div>
+    <div id="external-articles" class="articles-grid">
+      <!-- External articles will be loaded here -->
+    </div>
+  </div>
+
+  <script>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let allArticles = [];
+    let externalArticles = [];
+    let currentFilter = 'all';
+
+    // Category icons mapping
+    const categoryIcons = {
+      'ทั่วไป': 'bi-bookmark-fill',
+      'โภชนาการ': 'bi-apple',
+      'สุขภาพ': 'bi-heart-pulse-fill',
+      'การออกกำลังกาย': 'bi-activity',
+      'สุขภาพจิต': 'bi-emoji-smile-fill',
+      'สูตรอาหาร': 'bi-egg-fried',
+      'ความรู้': 'bi-lightbulb-fill'
+    };
+
+    // Load Firebase Articles
+    async function loadFirebaseArticles() {
+      const container = document.getElementById("firebase-articles");
+      
+      try {
+        const snapshot = await db.collection("articles")
+          .orderBy("createdAt", "desc")
+          .get();
+
+        if (snapshot.empty) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <i class="bi bi-inbox"></i>
+              <h3>ยังไม่มีบทความ</h3>
+              <p>กำลังเตรียมเนื้อหาดีๆ มาให้คุณ</p>
+            </div>
+          `;
+          return;
+        }
+
+        allArticles = [];
+        const categories = new Set(['all']);
+
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          allArticles.push({ id: doc.id, ...data });
+          if (data.category) {
+            categories.add(data.category);
+          }
+        });
+
+        console.log(`✅ โหลดบทความสำเร็จ: ${allArticles.length} บทความ`);
+        
+        createFilterTabs(Array.from(categories));
+        displayFirebaseArticles(allArticles);
+
+      } catch (error) {
+        console.error("❌ Error loading articles:", error);
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-exclamation-triangle"></i>
+            <h3>เกิดข้อผิดพลาด</h3>
+            <p>ไม่สามารถโหลดบทความได้: ${error.message}</p>
+          </div>
+        `;
+      }
+    }
+
+    function createFilterTabs(categories) {
+      const tabsContainer = document.getElementById("filter-tabs");
+      tabsContainer.innerHTML = '';
+
+      const allTab = document.createElement('div');
+      allTab.className = 'filter-tab active';
+      allTab.dataset.category = 'all';
+      allTab.innerHTML = '<i class="bi bi-grid-fill"></i> ทั้งหมด';
+      allTab.onclick = () => filterByCategory('all');
+      tabsContainer.appendChild(allTab);
+
+      categories.forEach(category => {
+        if (category !== 'all') {
+          const tab = document.createElement('div');
+          tab.className = 'filter-tab';
+          tab.dataset.category = category;
+          const icon = categoryIcons[category] || 'bi-bookmark-fill';
+          tab.innerHTML = `<i class="bi ${icon}"></i> ${category}`;
+          tab.onclick = () => filterByCategory(category);
+          tabsContainer.appendChild(tab);
+        }
+      });
+    }
+
+    function filterByCategory(category) {
+      currentFilter = category;
+
+      document.querySelectorAll('.filter-tab').forEach(tab => {
+        tab.classList.remove('active');
+        if (tab.dataset.category === category) {
+          tab.classList.add('active');
+        }
+      });
+
+      const filtered = category === 'all' 
+        ? allArticles 
+        : allArticles.filter(article => article.category === category);
+
+      displayFirebaseArticles(filtered);
+    }
+
+    function displayFirebaseArticles(articles) {
+      const container = document.getElementById("firebase-articles");
+      container.innerHTML = "";
+
+      if (articles.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-search"></i>
+            <h3>ไม่พบบทความ</h3>
+            <p>ลองค้นหาด้วยคำอื่นหรือเลือกหมวดหมู่ใหม่</p>
+          </div>
+        `;
+        return;
+      }
+
+      articles.forEach((article, index) => {
+        const card = createArticleCard(article, index === 0);
+        container.appendChild(card);
+      });
+    }
+
+    function createArticleCard(article, isFeatured = false) {
+      const div = document.createElement("div");
+      div.className = isFeatured ? "article-card featured" : "article-card";
+      
+      const date = article.createdAt?.toDate ? 
+        article.createdAt.toDate().toLocaleDateString('th-TH', {
+          day: 'numeric',
+          month: 'short',
+          year: '2-digit'
+        }) : "";
+      
+      const categoryClass = article.category || "ทั่วไป";
+      
+      div.innerHTML = `
+        ${article.imageUrl ? 
+          `<img src="${article.imageUrl}" alt="${article.title}" class="article-image" onerror="this.src='https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=400&h=300&fit=crop'">` : 
+          '<div class="article-image"></div>'
+        }
+        <div class="article-content">
+          <div>
+            <span class="article-category ${categoryClass}">${categoryClass}</span>
+            <div class="article-title">${article.title || "ไม่มีหัวข้อ"}</div>
+          </div>
+          <div class="article-meta">
+            ${date ? `<span><i class="bi bi-calendar3"></i>${date}</span>` : ''}
+            <span><i class="bi bi-eye-fill"></i>${article.views || 0}</span>
+          </div>
+        </div>
+      `;
+      
+      div.onclick = () => window.location.href = `user_article_view.html?id=${article.id}`;
+      return div;
+    }
+
+    function createExternalArticleCard(article) {
+      const div = document.createElement("div");
+      div.className = "article-card";
+      
+      const categoryClass = article.category || "ทั่วไป";
+      
+      div.innerHTML = `
+        ${article.imageUrl ? 
+          `<img src="${article.imageUrl}" alt="${article.title}" class="article-image" onerror="this.src='https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=400&h=300&fit=crop'">` : 
+          '<div class="article-image"></div>'
+        }
+        <div class="article-content">
+          <div>
+            <span class="article-category ${categoryClass}">${categoryClass}</span>
+            <div class="article-title">${article.title}</div>
+          </div>
+          <div class="article-meta">
+            <span><i class="bi bi-link-45deg"></i>บทความภายนอก</span>
+          </div>
+        </div>
+        <div class="external-badge">
+          <i class="bi bi-box-arrow-up-right"></i>
+        </div>
+      `;
+      
+      div.onclick = () => window.open(article.url, '_blank');
+      return div;
+    }
+
+    function loadExternalArticles() {
+      const container = document.getElementById("external-articles");
+      
+      db.collection("external_articles")
+        .orderBy("createdAt", "desc")
+        .get()
+        .then(snapshot => {
+          container.innerHTML = "";
+          
+          if (snapshot.empty) {
+            container.innerHTML = `
+              <div class="empty-state">
+                <i class="bi bi-link-45deg"></i>
+                <h3>ยังไม่มีบทความภายนอก</h3>
+                <p>รอติดตามบทความดีๆ เร็วๆ นี้</p>
+              </div>
+            `;
+            return;
+          }
+
+          externalArticles = [];
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            externalArticles.push({ id: doc.id, ...data });
+            const card = createExternalArticleCard(data);
+            container.appendChild(card);
+          });
+        })
+        .catch(error => {
+          console.error("Error loading external articles:", error);
+          container.innerHTML = `
+            <div class="empty-state">
+              <i class="bi bi-exclamation-triangle"></i>
+              <h3>เกิดข้อผิดพลาด</h3>
+              <p>ไม่สามารถโหลดบทความภายนอกได้</p>
+            </div>
+          `;
+        });
+    }
+
+    // Search functionality
+    document.getElementById("search-input").addEventListener("input", (e) => {
+      const searchTerm = e.target.value.toLowerCase().trim();
+      
+      if (searchTerm === "") {
+        displayFirebaseArticles(currentFilter === 'all' ? allArticles : allArticles.filter(a => a.category === currentFilter));
+        return;
+      }
+
+      const filtered = allArticles.filter(article => {
+        const title = (article.title || "").toLowerCase();
+        const content = (article.content || "").toLowerCase();
+        const category = (article.category || "").toLowerCase();
+        
+        return title.includes(searchTerm) || content.includes(searchTerm) || category.includes(searchTerm);
+      });
+
+      displayFirebaseArticles(filtered);
+    });
+
+    // Initialize
+    window.addEventListener("DOMContentLoaded", () => {
+      loadFirebaseArticles();
+      loadExternalArticles();
+    });
+  </script>
+</body>
+</html>

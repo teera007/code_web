@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แดชบอร์ดแอดมิน - Belly Reset</title>
+
+  <!-- ตรวจสอบการล็อกอิน -->
+  <script>
+    if (sessionStorage.getItem("loggedIn") !== "true") {
+      window.location.href = "login.html";
+    }
+  </script>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+  <script src="firebaseConfig.js"></script>
+
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 280px;
+      height: 100vh;
+      background: linear-gradient(180deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
+      backdrop-filter: blur(20px);
+      box-shadow: 4px 0 30px rgba(0, 0, 0, 0.3);
+      padding: 30px 0;
+      z-index: 1000;
+      transition: transform 0.3s ease;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar-header {
+      padding: 0 30px 30px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .logo-section {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+
+    .logo-icon {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0, 212, 255, 0.4);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .logo-icon i {
+      font-size: 24px;
+      color: #fff;
+    }
+
+    .logo-text h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #fff;
+      margin: 0;
+    }
+
+    .logo-text p {
+      font-size: 12px;
+      color: #00d4ff;
+      margin: 0;
+    }
+
+    .sidebar-nav {
+      padding: 20px 0;
+    }
+
+    .nav-item {
+      margin: 0 15px 8px;
+    }
+
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 20px;
+      color: rgba(255, 255, 255, 0.7);
+      text-decoration: none;
+      border-radius: 12px;
+      transition: all 0.3s;
+      font-weight: 500;
+      font-size: 15px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .nav-link::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 3px;
+      background: linear-gradient(180deg, #00d4ff 0%, #0099ff 100%);
+      transform: scaleY(0);
+      transition: transform 0.3s;
+    }
+
+    .nav-link:hover::before,
+    .nav-link.active::before {
+      transform: scaleY(1);
+    }
+
+    .nav-link i {
+      font-size: 20px;
+      width: 24px;
+      text-align: center;
+    }
+
+    .nav-link:hover {
+      background: rgba(0, 212, 255, 0.1);
+      color: #00d4ff;
+      transform: translateX(5px);
+    }
+
+    .nav-link.active {
+      background: linear-gradient(90deg, rgba(0, 212, 255, 0.2) 0%, rgba(0, 153, 255, 0.1) 100%);
+      color: #00d4ff;
+    }
+
+    .nav-link.logout {
+      color: #ff4757;
+    }
+
+    .nav-link.logout:hover {
+      background: rgba(255, 71, 87, 0.1);
+      color: #ff6b7a;
+    }
+
+    /* Main Content */
+    .main-content {
+      margin-left: 280px;
+      padding: 30px;
+      min-height: 100vh;
+    }
+
+    .top-bar {
+      background: linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(22, 33, 62, 0.8) 100%);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 25px 35px;
+      margin-bottom: 30px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .page-title h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #fff;
+      margin: 0 0 5px 0;
+      background: linear-gradient(90deg, #00d4ff 0%, #0099ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .page-title p {
+      color: rgba(255, 255, 255, 0.6);
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px;
+      background: rgba(0, 212, 255, 0.1);
+      border-radius: 50px;
+      border: 1px solid rgba(0, 212, 255, 0.3);
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .user-details span {
+      display: block;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .user-details strong {
+      font-size: 14px;
+      color: #00d4ff;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(22, 33, 62, 0.8) 100%);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: linear-gradient(90deg, var(--card-color-1), var(--card-color-2));
+    }
+
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, var(--card-color-1) 0%, transparent 70%);
+      opacity: 0.1;
+      animation: rotate 20s linear infinite;
+    }
+
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+      border-color: var(--card-color-1);
+    }
+
+    .stat-card.users {
+      --card-color-1: #00d4ff;
+      --card-color-2: #0099ff;
+    }
+
+    .stat-card.food {
+      --card-color-1: #ff6b6b;
+      --card-color-2: #ee5a6f;
+    }
+
+    .stat-card.content {
+      --card-color-1: #4ecdc4;
+      --card-color-2: #44a08d;
+    }
+
+    .stat-card.exercise {
+      --card-color-1: #95e1d3;
+      --card-color-2: #38ada9;
+    }
+
+    .stat-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .stat-title {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.6);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .stat-icon {
+      width: 45px;
+      height: 45px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      background: linear-gradient(135deg, var(--card-color-1), var(--card-color-2));
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .stat-value {
+      font-size: 38px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+      line-height: 1;
+      position: relative;
+      z-index: 1;
+    }
+
+    .stat-label {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 13px;
+      margin-bottom: 15px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .stat-action {
+      padding: 10px 20px;
+      background: linear-gradient(135deg, var(--card-color-1), var(--card-color-2));
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+      position: relative;
+      z-index: 1;
+    }
+
+    .stat-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      color: #fff;
+    }
+
+    /* Activity Section */
+    .activity-section {
+      background: linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(22, 33, 62, 0.8) 100%);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 30px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+    }
+
+    .table-header h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff !important; /* บังคับให้เป็นสีขาว */
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .section-header i {
+      color: #00d4ff;
+    }
+
+    /* Activity Feed */
+    .activity-feed {
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    .activity-feed::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .activity-feed::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+    }
+
+    .activity-feed::-webkit-scrollbar-thumb {
+      background: rgba(0, 212, 255, 0.3);
+      border-radius: 10px;
+    }
+
+    .activity-item {
+      display: flex;
+      gap: 15px;
+      padding: 15px;
+      margin-bottom: 12px;
+      background: rgba(0, 212, 255, 0.05);
+      border-radius: 12px;
+      border-left: 3px solid #00d4ff;
+      transition: all 0.3s;
+    }
+
+    .activity-item:hover {
+      background: rgba(0, 212, 255, 0.1);
+      transform: translateX(5px);
+    }
+
+    .activity-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .activity-icon.new-user {
+      background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+      color: #fff;
+    }
+
+    .activity-icon.food-log {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+      color: #fff;
+    }
+
+    .activity-icon.exercise {
+      background: linear-gradient(135deg, #95e1d3 0%, #38ada9 100%);
+      color: #fff;
+    }
+
+    .activity-details {
+      flex: 1;
+    }
+
+    .activity-details h4 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+      margin: 0 0 5px 0;
+    }
+
+    .activity-details p {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+      margin: 0;
+    }
+
+    .activity-time {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.4);
+      white-space: nowrap;
+    }
+
+    /* Table Section */
+    .table-section {
+      background: linear-gradient(135deg, rgba(26, 26, 46, 0.8) 0%, rgba(22, 33, 62, 0.8) 100%);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    thead {
+      background: rgba(0, 212, 255, 0.1);
+    }
+
+    thead th {
+      padding: 16px 20px;
+      text-align: left;
+      font-weight: 600;
+      color: #00d4ff;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid rgba(0, 212, 255, 0.3);
+    }
+
+    tbody tr {
+      transition: all 0.3s;
+    }
+
+    tbody tr:hover {
+      background: rgba(0, 212, 255, 0.05);
+    }
+
+    tbody td {
+      padding: 16px 20px;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .loading-state, .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .loading-state i {
+      font-size: 48px;
+      margin-bottom: 15px;
+      animation: spin 1s linear infinite;
+      color: #00d4ff;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .empty-state i {
+      font-size: 48px;
+      margin-bottom: 15px;
+      opacity: 0.5;
+    }
+
+    /* Mobile Toggle */
+    .mobile-toggle {
+      display: none;
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
+      border-radius: 50%;
+      border: none;
+      color: #fff;
+      font-size: 24px;
+      cursor: pointer;
+      box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
+      z-index: 1001;
+      transition: all 0.3s;
+    }
+
+    .mobile-toggle:hover {
+      transform: scale(1.1);
+    }
+
+    /* Responsive */
+    @media (max-width: 968px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+
+      .sidebar.active {
+        transform: translateX(0);
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding: 20px;
+      }
+
+      .mobile-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .top-bar {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-section">
+        <div class="logo-icon">
+          <i class="bi bi-heart-pulse"></i>
+        </div>
+        <div class="logo-text">
+          <h3>Belly Reset</h3>
+          <p>Admin Panel</p>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-item">
+        <a href="dashboard.html" class="nav-link active">
+          <i class="bi bi-speedometer2"></i>
+          <span>Dashboard</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="admin_management.html" class="nav-link">
+          <i class="bi bi-person-badge"></i>
+          <span>จัดการบัญชีแอดมิน</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="manage_users.html" class="nav-link">
+          <i class="bi bi-people"></i>
+          <span>จัดการข้อมูลผู้ใช้</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="articles.html" class="nav-link">
+          <i class="bi bi-file-text"></i>
+          <span>จัดการคอนเทนต์</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="excerise_set.html" class="nav-link">
+          <i class="bi bi-heart-pulse-fill"></i>
+          <span>เพิ่มท่าออกกำลังกาย</span>
+        </a>
+      </div>
+      <div class="nav-item">
+        <a href="#" class="nav-link logout" onclick="logout()">
+          <i class="bi bi-box-arrow-right"></i>
+          <span>ออกจากระบบ</span>
+        </a>
+      </div>
+    </nav>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Top Bar -->
+    <div class="top-bar">
+      <div class="page-title">
+        <h1>แดชบอร์ดภาพรวม</h1>
+        <p>สรุปข้อมูลและสถิติการใช้งานระบบ</p>
+      </div>
+      <div class="user-info">
+        <div class="user-avatar">A</div>
+        <div class="user-details">
+          <span>ผู้ดูแลระบบ</span>
+          <strong>Admin</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card users">
+        <div class="stat-header">
+          <span class="stat-title">ผู้ใช้งาน</span>
+          <div class="stat-icon">
+            <i class="bi bi-people-fill"></i>
+          </div>
+        </div>
+        <div class="stat-value" id="user-count">-</div>
+        <div class="stat-label">ผู้ใช้ทั้งหมดในระบบ</div>
+        <a href="manage_users.html" class="stat-action">ดูรายละเอียด</a>
+      </div>
+
+      <div class="stat-card food">
+        <div class="stat-header">
+          <span class="stat-title">เมนูอาหาร</span>
+          <div class="stat-icon">
+            <i class="bi bi-egg-fried"></i>
+          </div>
+        </div>
+        <div class="stat-value" id="food-count">-</div>
+        <div class="stat-label">รายการอาหารในระบบ</div>
+        <a href="food_catalog.html" class="stat-action">ดูรายละเอียด</a>
+      </div>
+
+      <div class="stat-card exercise">
+        <div class="stat-header">
+          <span class="stat-title">ท่าออกกำลังกาย</span>
+          <div class="stat-icon">
+            <i class="bi bi-heart-pulse-fill"></i>
+          </div>
+        </div>
+        <div class="stat-value" id="exercise-count">-</div>
+        <div class="stat-label">ท่าทั้งหมดในระบบ</div>
+        <a href="excerise_set.html" class="stat-action">จัดการท่า</a>
+      </div>
+
+      <div class="stat-card content">
+        <div class="stat-header">
+          <span class="stat-title">คอนเทนต์</span>
+          <div class="stat-icon">
+            <i class="bi bi-file-earmark-text"></i>
+          </div>
+        </div>
+        <div class="stat-value">-</div>
+        <div class="stat-label">บทความและเนื้อหา</div>
+        <a href="articles.html" class="stat-action">จัดการคอนเทนต์</a>
+      </div>
+    </div>
+
+    <!-- User Table -->
+    <div class="table-section">
+      <div class="table-header">
+        <h2>
+          <i class="bi bi-clock-history"></i>
+          ผู้ใช้งานล่าสุด
+        </h2>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>ชื่อ</th>
+              <th>เพศ</th>
+              <th>อายุ</th>
+              <th>ส่วนสูง (ซม.)</th>
+              <th>น้ำหนัก (กก.)</th>
+            </tr>
+          </thead>
+          <tbody id="latest-users">
+            <tr>
+              <td colspan="5">
+                <div class="loading-state">
+                  <i class="bi bi-arrow-repeat"></i>
+                  <p>กำลังโหลดข้อมูล...</p>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Toggle -->
+  <button class="mobile-toggle" onclick="toggleSidebar()">
+    <i class="bi bi-list"></i>
+  </button>
+
+  <script>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ส่วนที่ต้องแก้ไขใน dashboard.html
+
+async function loadDashboardData() {
+  try {
+    // นับผู้ใช้
+    const userSnapshot = await db.collection("users").get();
+    document.getElementById("user-count").innerText = userSnapshot.size;
+
+    // นับเมนูอาหาร
+    const foodSnapshot = await db.collection("food_logs").get();
+    document.getElementById("food-count").innerText = foodSnapshot.size;
+
+    // ⭐ นับท่าออกกำลังกายจาก exercise_set เท่านั้น
+    const exerciseSnapshot = await db.collection("exercise_set").get();
+    document.getElementById("exercise-count").innerText = exerciseSnapshot.size;
+
+    // โหลดผู้ใช้ล่าสุด
+    const latestUsersRef = await db.collection("users").limit(10).get();
+    const latestUsersTable = document.getElementById("latest-users");
+
+    if (latestUsersRef.empty) {
+      latestUsersTable.innerHTML = `
+        <tr>
+          <td colspan="5">
+            <div class="empty-state">
+              <i class="bi bi-inbox"></i>
+              <p>ยังไม่มีข้อมูลผู้ใช้</p>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    latestUsersTable.innerHTML = "";
+    latestUsersRef.forEach(doc => {
+      const data = doc.data();
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${data.name || "-"}</td>
+        <td>${data.gender || "-"}</td>
+        <td>${data.age || "-"}</td>
+        <td>${data.height || "-"}</td>
+        <td>${data.weight || "-"}</td>
+      `;
+      latestUsersTable.appendChild(tr);
+    });
+  } catch (error) {
+    console.error("Error loading dashboard:", error);
+    document.getElementById("latest-users").innerHTML = `
+      <tr>
+        <td colspan="5">
+          <div class="empty-state">
+            <i class="bi bi-exclamation-triangle"></i>
+            <p>เกิดข้อผิดพลาดในการโหลดข้อมูล</p>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+}
+
+    function logout() {
+      if (confirm("ต้องการออกจากระบบหรือไม่?")) {
+        sessionStorage.removeItem("loggedIn");
+        window.location.href = "login.html";
+      }
+    }
+
+    function toggleSidebar() {
+      document.getElementById("sidebar").classList.toggle("active");
+    }
+
+    // Close sidebar when clicking outside on mobile
+    document.addEventListener('click', function(event) {
+      const sidebar = document.getElementById('sidebar');
+      const toggle = document.querySelector('.mobile-toggle');
+      
+      if (window.innerWidth <= 968 && 
+          !sidebar.contains(event.target) && 
+          !toggle.contains(event.target) &&
+          sidebar.classList.contains('active')) {
+        sidebar.classList.remove('active');
+      }
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+      loadDashboardData();
+    });
+  </script>
+
+</body>
+</html>

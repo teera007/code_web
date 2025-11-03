@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>จัดการการแจ้งเตือน - Belly Reset</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+  <script src="firebaseConfig.js"></script>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- ฟอนต์ -->
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 30px 20px;
+    }
+
+    .container-custom {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .page-header {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 35px 45px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      animation: fadeInDown 0.6s ease-out;
+    }
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .page-header h1 {
+      font-size: 36px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0 0 10px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .page-header p {
+      color: #666;
+      margin: 0;
+      font-size: 15px;
+    }
+
+    /* Form Section */
+    .form-section {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 35px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      animation: fadeIn 0.6s ease-out 0.2s both;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .form-section h3 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 25px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .form-label {
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 8px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .form-control, .form-select {
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 13px 18px;
+      font-size: 15px;
+      transition: all 0.3s;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+      outline: none;
+    }
+
+    /* Notification List */
+    .notification-section {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 35px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      animation: fadeIn 0.6s ease-out 0.4s both;
+    }
+    .notification-section h3 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 25px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .notification-grid {
+      display: grid;
+      gap: 20px;
+    }
+    .notification-card {
+      background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+      border: 2px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .notification-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 5px;
+      height: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .notification-card:hover {
+      border-color: #667eea;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+      transform: translateY(-3px);
+    }
+    .notification-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 12px;
+    }
+    .notification-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #222;
+      margin: 0;
+    }
+    .notification-body {
+      color: #666;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 15px;
+    }
+    .notification-meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+    .badge-custom {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .badge-condition {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      color: #1e40af;
+    }
+    .badge-target {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      color: #92400e;
+    }
+    .badge-time {
+      background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%);
+      color: #6b21a8;
+    }
+    .badge-status {
+      background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+      color: #166534;
+    }
+    .badge-status-pending {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      color: #92400e;
+    }
+    .badge-status-failed {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      color: #b91c1c;
+    }
+    .notification-actions {
+      display: flex;
+      gap: 10px;
+      padding-top: 15px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    /* Buttons */
+    .btn-primary-gradient {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      color: #fff;
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 15px;
+      transition: all 0.3s;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+    }
+    .btn-primary-gradient:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+    .btn-primary-gradient:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-action {
+      padding: 8px 16px;
+      border-radius: 10px;
+      border: none;
+      font-weight: 600;
+      font-size: 13px;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+    .btn-edit {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      color: #1e40af;
+    }
+    .btn-edit:hover {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: #fff;
+    }
+    .btn-delete {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      color: #b91c1c;
+    }
+    .btn-delete:hover {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: #fff;
+    }
+    .btn-back {
+      background: rgba(255, 255, 255, 0.95);
+      border: none;
+      padding: 12px 28px;
+      border-radius: 12px;
+      color: #667eea;
+      font-weight: 600;
+      transition: all 0.3s;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      text-decoration: none;
+    }
+    .btn-back:hover {
+      background: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+      color: #667eea;
+    }
+
+    /* Filter Section */
+    .filter-section {
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      border: 2px solid #e5e7eb;
+    }
+
+    /* Alerts */
+    .alert-custom {
+      border-radius: 12px;
+      border: none;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #9ca3af;
+    }
+    .empty-state i {
+      font-size: 64px;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+    .empty-state p {
+      font-size: 16px;
+      margin: 0;
+    }
+
+    /* Loading */
+    .loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #ffffff;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 1s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      body {
+        padding: 20px 15px;
+      }
+      .page-header {
+        padding: 25px 30px;
+      }
+      .page-header h1 {
+        font-size: 28px;
+      }
+      .form-section, .notification-section {
+        padding: 25px 20px;
+      }
+      .notification-actions {
+        flex-direction: column;
+      }
+      .notification-meta {
+        flex-direction: column;
+        align-items: start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container-custom">
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
+    <div class="page-header">
+      <h1><i class="bi bi-bell"></i> ระบบแจ้งเตือนและโค้ชสุขภาพ</h1>
+      <p>จัดการและส่งการแจ้งเตือนให้กับผู้ใช้งาน</p>
+    </div>
+
+    <!-- Form Section -->
+    <div class="form-section">
+      <h3><i class="bi bi-plus-circle-fill"></i> สร้างการแจ้งเตือนใหม่</h3>
+      
+      <div class="row g-3">
+        <div class="col-12">
+          <label class="form-label"><i class="bi bi-bookmark"></i> หัวข้อ</label>
+          <input type="text" id="title" class="form-control" placeholder="อย่าลืมบันทึกอาหารวันนี้" maxlength="100">
+          <div class="form-text text-end">
+            <span id="titleCount">0</span>/100 ตัวอักษร
+          </div>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label"><i class="bi bi-chat-text"></i> ข้อความ</label>
+          <textarea id="message" class="form-control" rows="3" placeholder="การบันทึกอาหารสม่ำเสมอจะช่วยให้คุณควบคุมน้ำหนักได้ดีขึ้น..." maxlength="500"></textarea>
+          <div class="form-text text-end">
+            <span id="messageCount">0</span>/500 ตัวอักษร
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label"><i class="bi bi-diagram-3"></i> เงื่อนไขการส่ง</label>
+          <select id="condition" class="form-select">
+            <option value="no_food_log_3days">ไม่ได้บันทึกอาหาร 3 วัน</option>
+            <option value="no_weight_change_7days">น้ำหนักไม่เปลี่ยน 7 วัน</option>
+            <option value="inactive_users">ไม่ได้เปิดแอป 7 วัน</option>
+            <option value="daily_reminder">เตือนรายวัน</option>
+            <option value="weekly_summary">สรุปสัปดาห์</option>
+          </select>
+        </div>
+
+        <div class="col-md-6">
+          <label class="form-label"><i class="bi bi-people"></i> กลุ่มเป้าหมาย</label>
+          <select id="targetGroup" class="form-select">
+            <option value="all">ผู้ใช้ทั้งหมด</option>
+            <option value="inactive_users">ผู้ใช้ที่ไม่ Active</option>
+            <option value="active_users">ผู้ใช้ที่ Active</option>
+            <option value="weight_loss_goal">เป้าหมายลดน้ำหนัก</option>
+            <option value="custom">กำหนดเอง</option>
+          </select>
+        </div>
+
+        <div class="col-12">
+          <label class="form-label"><i class="bi bi-clock"></i> เวลาส่ง</label>
+          <input type="datetime-local" id="scheduleTime" class="form-control">
+        </div>
+
+        <div class="col-12">
+          <button class="btn-primary-gradient w-100" id="submitBtn" onclick="addNotification()">
+            <i class="bi bi-send-check"></i> สร้างการแจ้งเตือน
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Section -->
+    <div class="filter-section">
+      <div class="row g-2">
+        <div class="col-md-4">
+          <input type="text" id="searchInput" class="form-control" placeholder="ค้นหาจากหัวข้อหรือข้อความ...">
+        </div>
+        <div class="col-md-3">
+          <select id="statusFilter" class="form-select">
+            <option value="all">สถานะทั้งหมด</option>
+            <option value="pending">รอส่ง</option>
+            <option value="sent">ส่งแล้ว</option>
+            <option value="failed">ส่งล้มเหลว</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <select id="conditionFilter" class="form-select">
+            <option value="all">เงื่อนไขทั้งหมด</option>
+            <option value="no_food_log_3days">ไม่บันทึกอาหาร 3 วัน</option>
+            <option value="no_weight_change_7days">น้ำหนักไม่เปลี่ยน 7 วัน</option>
+            <option value="inactive_users">ไม่เปิดแอป 7 วัน</option>
+            <option value="daily_reminder">เตือนรายวัน</option>
+            <option value="weekly_summary">สรุปสัปดาห์</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">
+            <i class="bi bi-arrow-clockwise"></i> ล้าง
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification List -->
+    <div class="notification-section">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3><i class="bi bi-list-ul"></i> รายการแจ้งเตือนทั้งหมด</h3>
+        <span class="badge bg-primary" id="notificationCount">0 รายการ</span>
+      </div>
+      <div id="notification-list" class="notification-grid">
+        <div class="empty-state">
+          <i class="bi bi-hourglass-split"></i>
+          <p>กำลังโหลดข้อมูล...</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center mt-4">
+      <a href="dashboard.html" class="btn-back">
+        <i class="bi bi-arrow-left-circle"></i> กลับหน้า Dashboard
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // Firebase Initialization
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Global Variables
+    let notificationsUnsubscribe = null;
+    let currentNotifications = [];
+
+    // Utility Functions
+    function sanitizeHTML(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function showAlert(type, message) {
+      const alertContainer = document.getElementById('alertContainer');
+      const alertClass = type === 'success' ? 'alert-success' : 
+                        type === 'error' ? 'alert-danger' : 'alert-warning';
+      
+      const alert = document.createElement('div');
+      alert.className = `alert alert-custom ${alertClass}`;
+      alert.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+          <span>${sanitizeHTML(message)}</span>
+          <button type="button" class="btn-close" onclick="this.parentElement.parentElement.remove()"></button>
+        </div>
+      `;
+      
+      alertContainer.appendChild(alert);
+      
+      // Auto remove after 5 seconds
+      setTimeout(() => {
+        if (alert.parentElement) {
+          alert.remove();
+        }
+      }, 5000);
+    }
+
+    function setLoading(button, isLoading) {
+      if (isLoading) {
+        button.innerHTML = '<div class="loading-spinner"></div> กำลังดำเนินการ...';
+        button.disabled = true;
+      } else {
+        button.innerHTML = '<i class="bi bi-send-check"></i> สร้างการแจ้งเตือน';
+        button.disabled = false;
+      }
+    }
+
+    // Character Counters
+    document.getElementById('title').addEventListener('input', function() {
+      document.getElementById('titleCount').textContent = this.value.length;
+    });
+
+    document.getElementById('message').addEventListener('input', function() {
+      document.getElementById('messageCount').textContent = this.value.length;
+    });
+
+    // Main Functions
+    async function addNotification() {
+      const title = document.getElementById("title").value.trim();
+      const message = document.getElementById("message").value.trim();
+      const condition = document.getElementById("condition").value;
+      const targetGroup = document.getElementById("targetGroup").value;
+      const scheduleTime = document.getElementById("scheduleTime").value;
+      const submitBtn = document.getElementById("submitBtn");
+
+      if (!title || !message) {
+        showAlert('error', 'กรุณากรอกหัวข้อและข้อความ');
+        return;
+      }
+
+      if (title.length > 100) {
+        showAlert('error', 'หัวข้อต้องไม่เกิน 100 ตัวอักษร');
+        return;
+      }
+
+      if (message.length > 500) {
+        showAlert('error', 'ข้อความต้องไม่เกิน 500 ตัวอักษร');
+        return;
+      }
+
+      setLoading(submitBtn, true);
+
+      try {
+        await db.collection("notifications").add({
+          title: sanitizeHTML(title),
+          message: sanitizeHTML(message),
+          condition: condition,
+          targetGroup: targetGroup,
+          scheduleTime: scheduleTime ? new Date(scheduleTime) : null,
+          createdAt: new Date(),
+          status: 'pending',
+          sentAt: null
+        });
+
+        showAlert('success', 'สร้างการแจ้งเตือนสำเร็จ!');
+        
+        // Clear form
+        document.getElementById("title").value = "";
+        document.getElementById("message").value = "";
+        document.getElementById("scheduleTime").value = "";
+        document.getElementById("titleCount").textContent = "0";
+        document.getElementById("messageCount").textContent = "0";
+        
+      } catch (err) {
+        console.error("Error adding notification:", err);
+        showAlert('error', 'เกิดข้อผิดพลาดในการสร้างการแจ้งเตือน');
+      } finally {
+        setLoading(submitBtn, false);
+      }
+    }
+
+    function setupRealTimeListener() {
+      if (notificationsUnsubscribe) {
+        notificationsUnsubscribe();
+      }
+
+      let query = db.collection("notifications").orderBy("createdAt", "desc");
+
+      notificationsUnsubscribe = query.onSnapshot(
+        (snapshot) => {
+          currentNotifications = [];
+          snapshot.forEach(doc => {
+            currentNotifications.push({
+              id: doc.id,
+              ...doc.data()
+            });
+          });
+          renderNotifications(currentNotifications);
+          updateNotificationCount(currentNotifications.length);
+        },
+        (error) => {
+          console.error("Real-time listener error:", error);
+          showAlert('error', 'ไม่สามารถเชื่อมต่อกับฐานข้อมูลได้');
+        }
+      );
+    }
+
+    function renderNotifications(notifications) {
+      const list = document.getElementById("notification-list");
+      
+      if (notifications.length === 0) {
+        list.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <p>ไม่พบการแจ้งเตือน</p>
+          </div>
+        `;
+        return;
+      }
+
+      list.innerHTML = "";
+      
+      const conditionLabels = {
+        'no_food_log_3days': 'ไม่บันทึกอาหาร 3 วัน',
+        'no_weight_change_7days': 'น้ำหนักไม่เปลี่ยน 7 วัน',
+        'inactive_users': 'ไม่เปิดแอป 7 วัน',
+        'daily_reminder': 'เตือนรายวัน',
+        'weekly_summary': 'สรุปสัปดาห์'
+      };
+      
+      const targetLabels = {
+        'all': 'ทุกคน',
+        'inactive_users': 'ผู้ใช้ไม่ Active',
+        'active_users': 'ผู้ใช้ Active',
+        'weight_loss_goal': 'เป้าหมายลดน้ำหนัก',
+        'custom': 'กำหนดเอง'
+      };
+
+      const statusLabels = {
+        'pending': 'รอส่ง',
+        'sent': 'ส่งแล้ว',
+        'failed': 'ส่งล้มเหลว'
+      };
+
+      const statusBadgeClasses = {
+        'pending': 'badge-status-pending',
+        'sent': 'badge-status',
+        'failed': 'badge-status-failed'
+      };
+
+      notifications.forEach(notification => {
+        const card = document.createElement("div");
+        card.className = "notification-card";
+        
+        const timeText = notification.scheduleTime ? 
+          new Date(notification.scheduleTime.seconds * 1000).toLocaleString('th-TH') : 
+          'ไม่ระบุเวลา';
+
+        card.innerHTML = `
+          <div class="notification-header">
+            <h4 class="notification-title">${sanitizeHTML(notification.title)}</h4>
+            <span class="badge-custom ${statusBadgeClasses[notification.status]}">
+              <i class="bi bi-circle-fill"></i> ${statusLabels[notification.status]}
+            </span>
+          </div>
+          <div class="notification-body">${sanitizeHTML(notification.message)}</div>
+          <div class="notification-meta">
+            <span class="badge-custom badge-condition">
+              <i class="bi bi-diagram-3"></i> ${conditionLabels[notification.condition] || notification.condition}
+            </span>
+            <span class="badge-custom badge-target">
+              <i class="bi bi-people"></i> ${targetLabels[notification.targetGroup] || notification.targetGroup}
+            </span>
+            <span class="badge-custom badge-time">
+              <i class="bi bi-clock"></i> ${timeText}
+            </span>
+          </div>
+          <div class="notification-actions">
+            <button class="btn-action btn-edit" onclick="editNotification('${notification.id}')">
+              <i class="bi bi-pencil-square"></i> แก้ไข
+            </button>
+            <button class="btn-action btn-delete" onclick="deleteNotification('${notification.id}')">
+              <i class="bi bi-trash3"></i> ลบ
+            </button>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    function updateNotificationCount(count) {
+      document.getElementById('notificationCount').textContent = `${count} รายการ`;
+    }
+
+    function filterNotifications() {
+      const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
+      const conditionFilter = document.getElementById('conditionFilter').value;
+
+      const filtered = currentNotifications.filter(notification => {
+        const matchesSearch = notification.title.toLowerCase().includes(searchTerm) || 
+                            notification.message.toLowerCase().includes(searchTerm);
+        const matchesStatus = statusFilter === 'all' || notification.status === statusFilter;
+        const matchesCondition = conditionFilter === 'all' || notification.condition === conditionFilter;
+
+        return matchesSearch && matchesStatus && matchesCondition;
+      });
+
+      renderNotifications(filtered);
+      updateNotificationCount(filtered.length);
+    }
+
+    function clearFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('statusFilter').value = 'all';
+      document.getElementById('conditionFilter').value = 'all';
+      filterNotifications();
+    }
+
+    async function deleteNotification(id) {
+      if (!confirm("ต้องการลบการแจ้งเตือนนี้หรือไม่?")) {
+        return;
+      }
+
+      try {
+        await db.collection("notifications").doc(id).delete();
+        showAlert('success', 'ลบการแจ้งเตือนสำเร็จ');
+      } catch (err) {
+        console.error("Error deleting notification:", err);
+        showAlert('error', 'เกิดข้อผิดพลาดในการลบการแจ้งเตือน');
+      }
+    }
+
+    function editNotification(id) {
+      showAlert('warning', 'ฟังก์ชันแก้ไขกำลังอยู่ในขั้นตอนการพัฒนา');
+    }
+
+    // Event Listeners for Filters
+    document.getElementById('searchInput').addEventListener('input', filterNotifications);
+    document.getElementById('statusFilter').addEventListener('change', filterNotifications);
+    document.getElementById('conditionFilter').addEventListener('change', filterNotifications);
+
+    // Initialize
+    window.addEventListener("DOMContentLoaded", () => {
+      setupRealTimeListener();
+    });
+
+    // Error Handling
+    window.addEventListener('error', (e) => {
+      console.error('Global error:', e);
+      showAlert('error', 'เกิดข้อผิดพลาดในระบบ');
+    });
+  </script>
+</body>
+</html>

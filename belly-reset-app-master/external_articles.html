@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>จัดการบทความภายนอก - Belly Reset</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+  <script src="firebaseConfig.js"></script>
+
+  <!-- Bootstrap -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- ฟอนต์ -->
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Kanit', sans-serif;
+      background-color: #f5f7fa;
+      overflow-x: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 250px;
+      height: 100vh;
+      background: linear-gradient(180deg, #1e3c72 0%, #2a5298 100%);
+      padding: 20px 0;
+      z-index: 1000;
+      box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+      overflow-y: auto;
+    }
+
+    .sidebar-logo {
+      text-align: center;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sidebar-logo h3 {
+      color: white;
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin: 10px 0 5px 0;
+    }
+
+    .sidebar-logo p {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.85rem;
+      margin: 0;
+    }
+
+    .sidebar-menu {
+      padding: 0;
+    }
+
+    .sidebar-menu a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 25px;
+      color: rgba(255, 255, 255, 0.8);
+      text-decoration: none;
+      transition: all 0.3s ease;
+      font-size: 0.95rem;
+      border-left: 3px solid transparent;
+    }
+
+    .sidebar-menu a:hover,
+    .sidebar-menu a.active {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border-left-color: #4CAF50;
+    }
+
+    .sidebar-menu a i {
+      font-size: 1.2rem;
+      width: 25px;
+    }
+
+    /* Top Header */
+    .top-header {
+      position: fixed;
+      left: 250px;
+      top: 0;
+      right: 0;
+      height: 70px;
+      background: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 30px;
+      z-index: 999;
+    }
+
+    .page-title-header {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #2a5298;
+    }
+
+    /* Main Content */
+    .main-content {
+      margin-left: 250px;
+      margin-top: 70px;
+      padding: 30px;
+      min-height: calc(100vh - 70px);
+    }
+
+    .info-box {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 25px;
+      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .info-box h4 {
+      margin: 0 0 10px 0;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .info-box p {
+      margin: 0;
+      font-size: 0.95rem;
+      opacity: 0.95;
+    }
+
+    /* Add Button */
+    .btn-add-article {
+      background: linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%);
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 12px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.3s ease;
+      margin-bottom: 25px;
+      cursor: pointer;
+    }
+
+    .btn-add-article:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 187, 106, 0.4);
+      color: white;
+    }
+
+    /* Articles Grid */
+    .articles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+      gap: 25px;
+    }
+
+    .article-card {
+      background: white;
+      border-radius: 15px;
+      overflow: hidden;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+      transition: all 0.3s ease;
+      position: relative;
+      display: flex;
+      height: 160px;
+    }
+
+    .article-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+    }
+
+    .article-image-container {
+      position: relative;
+      width: 180px;
+      flex-shrink: 0;
+    }
+
+    .article-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .article-badge {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: rgba(102, 187, 106, 0.95);
+      color: white;
+      padding: 5px 12px;
+      border-radius: 15px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+
+    .article-content {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .article-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #2a5298;
+      margin-bottom: 8px;
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .article-url {
+      color: #66BB6A;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-bottom: 12px;
+      word-break: break-all;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .article-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn-edit {
+      background: #667eea;
+      color: white;
+    }
+
+    .btn-edit:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+    }
+
+    .btn-delete {
+      background: #ff6b6b;
+      color: white;
+    }
+
+    .btn-delete:hover {
+      background: #ee5a5a;
+      transform: translateY(-2px);
+    }
+
+    /* Modal Styles */
+    .modal-header {
+      background: linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%);
+      color: white;
+    }
+
+    .modal-header .btn-close {
+      filter: brightness(0) invert(1);
+    }
+
+    .form-label {
+      font-weight: 500;
+      color: #555;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-label i {
+      color: #66BB6A;
+    }
+
+    .form-label .required {
+      color: #ff6b6b;
+    }
+
+    .form-control, .form-select {
+      border: 2px solid #e0e7ff;
+      border-radius: 12px;
+      padding: 12px 16px;
+      transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: #66BB6A;
+      box-shadow: 0 0 0 0.2rem rgba(102, 187, 106, 0.15);
+    }
+
+    #imagePreview {
+      margin-top: 15px;
+      max-width: 100%;
+      max-height: 200px;
+      border-radius: 10px;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-gradient {
+      background: linear-gradient(135deg, #66BB6A 0%, #4CAF50 100%);
+      border: none;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+
+    .btn-gradient:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 187, 106, 0.4);
+      color: white;
+    }
+
+    /* Loading State */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 400px;
+      color: #999;
+      grid-column: 1/-1;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #66BB6A;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #999;
+      grid-column: 1/-1;
+    }
+
+    .empty-state i {
+      font-size: 4rem;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .articles-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        transform: translateX(-250px);
+      }
+
+      .top-header {
+        left: 0;
+      }
+
+      .main-content {
+        margin-left: 0;
+      }
+
+      .article-card {
+        flex-direction: column;
+        height: auto;
+      }
+
+      .article-image-container {
+        width: 100%;
+        height: 180px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <i class="fas fa-heartbeat" style="font-size: 2.5rem; color: #4CAF50;"></i>
+      <h3>BELLY RESET</h3>
+      <p>Health Management</p>
+    </div>
+    <div class="sidebar-menu">
+      <a href="dashboard.html">
+        <i class="fas fa-home"></i>
+        <span>หน้าหลัก</span>
+      </a>
+      <a href="articles.html">
+        <i class="fas fa-newspaper"></i>
+        <span>จัดการบทความ</span>
+      </a>
+      <a href="external_articles.html" class="active">
+        <i class="fas fa-link"></i>
+        <span>บทความภายนอก</span>
+      </a>
+      <a href="exercise_guide.html">
+        <i class="fas fa-dumbbell"></i>
+        <span>ท่าออกกำลังกาย</span>
+      </a>
+      <a href="manage_users.html">
+        <i class="fas fa-users"></i>
+        <span>จัดการผู้ใช้</span>
+      </a>
+      <a href="food_catalog.html">
+        <i class="fas fa-book"></i>
+        <span>คลังอาหาร</span>
+      </a>
+      <a href="#" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i>
+        <span>ออกจากระบบ</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Top Header -->
+  <div class="top-header">
+    <div class="page-title-header">
+      <i class="fas fa-link"></i>
+      จัดการบทความภายนอก
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Info Box -->
+    <div class="info-box">
+      <h4>
+        <i class="fas fa-info-circle"></i>
+        เกี่ยวกับบทความภายนอก
+      </h4>
+      <p>
+        บทความภายนอกคือลิงก์ไปยังบทความที่น่าสนใจจากเว็บไซต์อื่น ซึ่งจะแสดงในส่วน "บทความอื่นๆ ที่น่าสนใจ" ในหน้าผู้ใช้
+      </p>
+    </div>
+
+    <!-- Add Button -->
+    <button class="btn-add-article" data-bs-toggle="modal" data-bs-target="#addArticleModal">
+      <i class="fas fa-plus-circle"></i>
+      เพิ่มบทความภายนอก
+    </button>
+
+    <!-- Articles Grid -->
+    <div id="articlesContainer" class="articles-grid">
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p>กำลังโหลดบทความ...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Article Modal -->
+  <div class="modal fade" id="addArticleModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitle">
+            <i class="fas fa-plus-circle"></i> เพิ่มบทความภายนอก
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="editId">
+
+          <div class="mb-3">
+            <label class="form-label">
+              <i class="fas fa-heading"></i>
+              ชื่อบทความ <span class="required">*</span>
+            </label>
+            <input type="text" id="title" class="form-control" placeholder="เช่น 7 วิธี ง่าย ๆ ในการเริ่มคีโต้มื้อแรก">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">
+              <i class="fas fa-tag"></i>
+              หมวดหมู่ <span class="required">*</span>
+            </label>
+            <select id="category" class="form-select">
+              <option value="">-- เลือกหมวดหมู่ --</option>
+              <option value="โภชนาการ">🥗 โภชนาการ</option>
+              <option value="การออกกำลังกาย">💪 การออกกำลังกาย</option>
+              <option value="สุขภาพทั่วไป">❤️ สุขภาพทั่วไป</option>
+              <option value="การลดน้ำหนัก">⚖️ การลดน้ำหนัก</option>
+              <option value="สุขภาพจิต">🧠 สุขภาพจิต</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">
+              <i class="fas fa-link"></i>
+              URL บทความ <span class="required">*</span>
+            </label>
+            <input type="url" id="url" class="form-control" placeholder="https://example.com/article">
+            <small class="text-muted">URL เต็มของบทความต้นฉบับ</small>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">
+              <i class="fas fa-image"></i>
+              URL รูปภาพปก
+            </label>
+            <input type="url" id="imageUrl" class="form-control" placeholder="https://example.com/image.jpg" onchange="previewImage()">
+            <small class="text-muted">URL รูปภาพจาก Unsplash หรือแหล่งอื่น (ไม่บังคับ)</small>
+            <img id="imagePreview" alt="ตัวอย่างรูปภาพ">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+          <button type="button" class="btn btn-gradient" id="saveBtn" onclick="saveArticle()">
+            <i class="fas fa-save"></i> บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let currentEditId = null;
+
+    // ฟังก์ชันแสดงตัวอย่างรูปภาพ
+    function previewImage() {
+      const preview = document.getElementById('imagePreview');
+      const url = document.getElementById('imageUrl').value.trim();
+      
+      if (url) {
+        preview.src = url;
+        preview.style.display = 'block';
+        preview.onerror = function() {
+          this.style.display = 'none';
+          alert('ไม่สามารถโหลดรูปภาพจาก URL นี้ได้');
+        };
+      } else {
+        preview.style.display = 'none';
+      }
+    }
+
+    // ฟังก์ชันโหลดบทความ
+    async function loadArticles() {
+      const container = document.getElementById('articlesContainer');
+      
+      try {
+        const snapshot = await db.collection("external_articles")
+          .orderBy("createdAt", "desc")
+          .get();
+        
+        container.innerHTML = "";
+
+        if (snapshot.empty) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <i class="fas fa-link"></i>
+              <h3>ยังไม่มีบทความภายนอก</h3>
+              <p>เริ่มต้นเพิ่มบทความภายนอกแรกของคุณ</p>
+            </div>
+          `;
+          return;
+        }
+
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const card = createArticleCard(doc.id, data);
+          container.appendChild(card);
+        });
+        
+      } catch (error) {
+        console.error("Error loading articles:", error);
+        container.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-exclamation-triangle"></i>
+            <h3>เกิดข้อผิดพลาด</h3>
+            <p>ไม่สามารถโหลดบทความได้ กรุณาลองใหม่อีกครั้ง</p>
+          </div>
+        `;
+      }
+    }
+
+    // ฟังก์ชันสร้าง Card บทความ
+    function createArticleCard(id, data) {
+      const card = document.createElement('div');
+      card.className = 'article-card';
+
+      const imageUrl = data.imageUrl || 'https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=400&h=300&fit=crop';
+      const title = data.title || 'ไม่มีชื่อบทความ';
+      const category = data.category || 'ทั่วไป';
+      const url = data.url || '#';
+
+      card.innerHTML = `
+        <div class="article-image-container">
+          <img src="${imageUrl}" alt="${title}" class="article-image" onerror="this.src='https://images.unsplash.com/photo-1505751172876-fa1923c5c528?w=400&h=300&fit=crop'">
+          <span class="article-badge">${category}</span>
+        </div>
+        <div class="article-content">
+          <div>
+            <h3 class="article-title">${title}</h3>
+            <div class="article-url">
+              <i class="fas fa-external-link-alt"></i>
+              ${url}
+            </div>
+          </div>
+          <div class="article-actions">
+            <button class="action-btn btn-edit" onclick="editArticle('${id}')">
+              <i class="fas fa-edit"></i> แก้ไข
+            </button>
+            <button class="action-btn btn-delete" onclick="deleteArticle('${id}')">
+              <i class="fas fa-trash"></i> ลบ
+            </button>
+          </div>
+        </div>
+      `;
+
+      return card;
+    }
+
+    // ฟังก์ชันบันทึกบทความ
+    async function saveArticle() {
+      const title = document.getElementById("title").value.trim();
+      const category = document.getElementById("category").value;
+      const url = document.getElementById("url").value.trim();
+      const imageUrl = document.getElementById("imageUrl").value.trim();
+      const editId = document.getElementById("editId").value;
+
+      if (!title || !category || !url) {
+        alert("กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน");
+        return;
+      }
+
+      // Validate URL
+      try {
+        new URL(url);
+      } catch (e) {
+        alert("กรุณากรอก URL ที่ถูกต้อง");
+        return;
+      }
+
+      const btn = document.getElementById("saveBtn");
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...';
+      btn.disabled = true;
+
+      try {
+        const articleData = {
+          title,
+          category,
+          url,
+          imageUrl: imageUrl || null,
+          updatedAt: new Date()
+        };
+
+        if (editId) {
+          // แก้ไข
+          await db.collection("external_articles").doc(editId).update(articleData);
+          alert("แก้ไขบทความสำเร็จ");
+        } else {
+          // เพิ่มใหม่
+          articleData.createdAt = new Date();
+          await db.collection("external_articles").add(articleData);
+          alert("เพิ่มบทความสำเร็จ");
+        }
+
+        // ปิด Modal และรีเซ็ตฟอร์ม
+        bootstrap.Modal.getInstance(document.getElementById('addArticleModal')).hide();
+        resetForm();
+        loadArticles();
+        
+      } catch (error) {
+        console.error("Error saving article:", error);
+        alert("เกิดข้อผิดพลาดในการบันทึกบทความ");
+      } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }
+    }
+
+    // ฟังก์ชันแก้ไขบทความ
+    async function editArticle(id) {
+      try {
+        const doc = await db.collection("external_articles").doc(id).get();
+        
+        if (!doc.exists) {
+          alert("ไม่พบบทความ");
+          return;
+        }
+
+        const data = doc.data();
+        
+        // เปลี่ยนชื่อ Modal
+        document.getElementById("modalTitle").innerHTML = '<i class="fas fa-edit"></i> แก้ไขบทความภายนอก';
+        
+        // กรอกข้อมูลในฟอร์ม
+        document.getElementById("editId").value = id;
+        document.getElementById("title").value = data.title || '';
+        document.getElementById("category").value = data.category || '';
+        document.getElementById("url").value = data.url || '';
+        document.getElementById("imageUrl").value = data.imageUrl || '';
+        
+        if (data.imageUrl) {
+          previewImage();
+        }
+
+        // เปิด Modal
+        new bootstrap.Modal(document.getElementById('addArticleModal')).show();
+        
+      } catch (error) {
+        console.error("Error loading article:", error);
+        alert("เกิดข้อผิดพลาดในการโหลดข้อมูล");
+      }
+    }
+
+    // ฟังก์ชันลบบทความ
+    async function deleteArticle(id) {
+      if (!confirm("คุณต้องการลบบทความภายนอกนี้หรือไม่?\nการกระทำนี้ไม่สามารถย้อนกลับได้")) return;
+      
+      try {
+        await db.collection("external_articles").doc(id).delete();
+        alert("ลบบทความเรียบร้อยแล้ว");
+        loadArticles();
+      } catch (error) {
+        console.error("Error deleting article:", error);
+        alert("เกิดข้อผิดพลาดในการลบบทความ");
+      }
+    }
+
+    // ฟังก์ชันรีเซ็ตฟอร์ม
+    function resetForm() {
+      document.getElementById("editId").value = '';
+      document.getElementById("title").value = '';
+      document.getElementById("category").value = '';
+      document.getElementById("url").value = '';
+      document.getElementById("imageUrl").value = '';
+      document.getElementById("imagePreview").style.display = 'none';
+      document.getElementById("modalTitle").innerHTML = '<i class="fas fa-plus-circle"></i> เพิ่มบทความภายนอก';
+    }
+
+    // Reset form เมื่อปิด Modal
+    document.getElementById('addArticleModal').addEventListener('hidden.bs.modal', function () {
+      resetForm();
+    });
+
+    // ฟังก์ชัน Logout
+    function logout() {
+      if (confirm('คุณต้องการออกจากระบบหรือไม่?')) {
+        sessionStorage.removeItem("loggedIn");
+        window.location.href = "login.html";
+      }
+    }
+
+    // โหลดข้อมูลเมื่อเปิดหน้า
+    window.addEventListener("DOMContentLoaded", loadArticles);
+  </script>
+
+</body>
+</html>

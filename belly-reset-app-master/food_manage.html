@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>จัดการหมวดอาหาร</title>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+  <script src="firebaseConfig.js"></script>
+
+  <style>
+    body { font-family: "Prompt", sans-serif; padding: 20px; background: #f8f9fa; }
+    h1 { text-align: center; }
+    .form { margin: 20px auto; max-width: 500px; padding: 20px; background: #fff; border-radius: 8px; }
+    .form input { width: 100%; margin-bottom: 10px; padding: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+    th { background: #f0f0f0; }
+    button { margin: 2px; padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; }
+    .add { background: #28a745; color: white; }
+    .edit { background: #ffc107; color: white; }
+    .delete { background: #dc3545; color: white; }
+  </style>
+</head>
+<body>
+  <h1 id="categoryTitle">จัดการหมวดอาหาร</h1>
+
+  <!-- ฟอร์มเพิ่มอาหาร -->
+  <div class="form">
+    <input type="text" id="foodName" placeholder="ชื่ออาหาร">
+    <input type="number" id="foodCalories" placeholder="แคลอรี่ (kcal)">
+    <input type="text" id="foodUnit" placeholder="หน่วย (เช่น จาน, 100 กรัม)">
+    <input type="file" id="foodImage" accept="image/*">
+    <button class="add" onclick="addFood()">+ เพิ่มอาหาร</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ชื่ออาหาร</th>
+        <th>แคลอรี่</th>
+        <th>หน่วย</th>
+        <th>จัดการ</th>
+      </tr>
+    </thead>
+    <tbody id="foodList"></tbody>
+  </table>
+
+  <script>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // อ่าน category จาก URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const category = urlParams.get("category");
+    const categoryNames = {
+      protein: "โปรตีน",
+      carb: "คาร์โบไฮเดรต",
+      vegetable: "ผัก",
+      fruit: "ผลไม้",
+      dairy: "นม & ไขมันดี"
+    };
+    document.getElementById("categoryTitle").innerText = "จัดการหมวด: " + categoryNames[category];
+
+    const foodList = document.getElementById("foodList");
+
+    async function loadFoods() {
+      const snapshot = await db.collection("foods").where("category", "==", category).get();
+      foodList.innerHTML = "";
+      snapshot.forEach(doc => {
+        const food = doc.data();
+        foodList.innerHTML += `
+          <tr>
+            <td>${food.name}</td>
+            <td>${food.calories}</td>
+            <td>${food.unit || "-"}</td>
+            <td>
+              <button class="edit" onclick="editFood('${doc.id}', '${food.name}', '${food.calories}', '${food.unit || ""}')">แก้ไข</button>
+              <button class="delete" onclick="deleteFood('${doc.id}')">ลบ</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    async function addFood() {
+      const name = document.getElementById("foodName").value.trim();
+      const calories = parseInt(document.getElementById("foodCalories").value);
+      const unit = document.getElementById("foodUnit").value.trim();
+
+      if (!name || !calories) {
+        alert("กรอกข้อมูลให้ครบ");
+        return;
+      }
+
+      await db.collection("foods").add({
+        name, calories, unit, category,
+        createdAt: new Date()
+      });
+
+      document.getElementById("foodName").value = "";
+      document.getElementById("foodCalories").value = "";
+      document.getElementById("foodUnit").value = "";
+      loadFoods();
+    }
+
+    async function editFood(id, oldName, oldCal, oldUnit) {
+      const name = prompt("แก้ไขชื่ออาหาร:", oldName);
+      const calories = prompt("แก้ไขแคลอรี่:", oldCal);
+      const unit = prompt("แก้ไขหน่วย:", oldUnit);
+
+      if (name && calories) {
+        await db.collection("foods").doc(id).update({
+          name, calories: parseInt(calories), unit
+        });
+        loadFoods();
+      }
+    }
+
+    async function deleteFood(id) {
+      if (confirm("ลบอาหารนี้ใช่ไหม?")) {
+        await db.collection("foods").doc(id).delete();
+        loadFoods();
+      }
+    }
+
+    loadFoods();
+  </script>
+</body>
+</html>

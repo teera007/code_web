@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>สมัครสมาชิก - Belly Reset</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit&display=swap" rel="stylesheet">
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+  <script src="firebaseConfig.js"></script>
+
+  <style>
+    body {
+      font-family: 'Kanit', sans-serif;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(to right, #e0f7fa, #e8f5e9);
+      margin: 0;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 5px;
+      font-size: 32px;
+      color: #333;
+    }
+
+    h3 {
+      margin-top: 0;
+      margin-bottom: 30px;
+      font-size: 18px;
+      color: #666;
+    }
+
+    .register-box {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+      width: 350px;
+      text-align: center;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 12px;
+      margin-top: 15px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 12px;
+      width: 100%;
+      background-color: #2196F3;
+      color: white;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #1976D2;
+    }
+
+    p {
+      font-size: 14px;
+    }
+
+    a {
+      color: #1976D2;
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <h1>ระบบ Belly Reset</h1>
+  <h3>สมัครสมาชิกใหม่</h3>
+
+  <div class="register-box">
+    <h2>📝 สมัครสมาชิก</h2>
+    <input type="text" id="name" placeholder="ชื่อ - สกุล" />
+    <input type="email" id="email" placeholder="อีเมล" />
+    <input type="password" id="password" placeholder="รหัสผ่าน" />
+    <select id="role">
+      <option value="user">ผู้ใช้ทั่วไป</option>
+      <option value="admin">ผู้ดูแลระบบ (Admin)</option>
+    </select>
+    <button onclick="register()">สมัครสมาชิก</button>
+    <p id="error" style="color: red;"></p>
+    <p>มีบัญชีแล้ว? <a href="login.html">เข้าสู่ระบบ</a></p>
+  </div>
+
+  <script>
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    async function register() {
+      const name = document.getElementById("name").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const role = document.getElementById("role").value;
+      const errorMsg = document.getElementById("error");
+
+      errorMsg.textContent = "";
+
+      if (!name || !email || !password) {
+        errorMsg.textContent = "⚠️ กรุณากรอกข้อมูลให้ครบถ้วน";
+        return;
+      }
+
+      try {
+        // สร้างบัญชีใน Firebase Auth
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+
+        // เพิ่มข้อมูลลง Firestore
+        await db.collection("users").doc(user.uid).set({
+          name,
+          email,
+          role,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        alert("✅ สมัครสมาชิกสำเร็จ!");
+        if (role === "admin") {
+          window.location.href = "dashboard.html";
+        } else {
+          window.location.href = "user_pages/user_dashboard.html";
+        }
+      } catch (error) {
+        console.error(error);
+        errorMsg.textContent = "❌ ไม่สามารถสมัครสมาชิกได้: " + error.message;
+      }
+    }
+  </script>
+</body>
+</html>

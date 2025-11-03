@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แนะนำท่าออกกำลังกาย - Belly Reset</title>
+
+  <script src="auth-guard.js"></script>
+  <script>
+    if (!checkPageAccess('exercise_management')) {}
+  </script>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+  <script src="firebaseConfig.js"></script>
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #16a34a;
+      --primary-light: #22c55e;
+      --primary-dark: #15803d;
+      --secondary: #0ea5e9;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --bg-gradient: linear-gradient(135deg, #d2f1e4 0%, #a7f3d0 50%, #6fdc8c 100%);
+      --card-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      --card-shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      padding: 20px;
+      animation: gradientShift 15s ease infinite;
+      background-size: 200% 200%;
+    }
+
+    @keyframes gradientShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    .main-container {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    .page-header {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 32px 40px;
+      border-radius: 28px;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+      border: 1px solid rgba(255,255,255,0.8);
+    }
+
+    .header-content h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header-icon {
+      font-size: 2.5rem;
+      filter: drop-shadow(0 2px 8px rgba(22, 163, 74, 0.3));
+    }
+
+    .header-content p {
+      color: #6b7280;
+      margin: 0;
+      font-weight: 400;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 20px;
+      margin-top: 16px;
+    }
+
+    .stat-item {
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      padding: 12px 20px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--primary-dark);
+    }
+
+    .btn-add {
+      background: linear-gradient(135deg, var(--primary-light), var(--primary));
+      color: #fff;
+      border: none;
+      border-radius: 16px;
+      padding: 14px 32px;
+      font-weight: 600;
+      font-size: 16px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-add:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(22, 163, 74, 0.4);
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    }
+
+    /* New Form Design */
+    .form-section {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 40px;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 32px;
+      display: none;
+      border: 1px solid rgba(255,255,255,0.8);
+      animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .form-section.show { 
+      display: block; 
+    }
+
+    .form-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .form-header h4 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      color: #1f2937;
+      margin-bottom: 12px;
+    }
+
+    .form-header p {
+      color: #6b7280;
+      font-size: 15px;
+    }
+
+    /* Progress Steps */
+    .progress-steps {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 40px;
+      position: relative;
+    }
+
+    .progress-steps::before {
+      content: '';
+      position: absolute;
+      top: 24px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: #e5e7eb;
+      z-index: 0;
+    }
+
+    .progress-line {
+      position: absolute;
+      top: 24px;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary-light), var(--primary));
+      transition: width 0.4s ease;
+      z-index: 1;
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex: 1;
+      position: relative;
+      z-index: 2;
+    }
+
+    .step-circle {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      color: #9ca3af;
+      margin-bottom: 12px;
+      transition: all 0.3s;
+    }
+
+    .step.active .step-circle {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, var(--primary-light), var(--primary));
+      color: #fff;
+      box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
+    }
+
+    .step.completed .step-circle {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .step-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #9ca3af;
+      text-align: center;
+    }
+
+    .step.active .step-label {
+      color: var(--primary-dark);
+      font-weight: 600;
+    }
+
+    /* Step Content */
+    .step-content {
+      display: none;
+    }
+
+    .step-content.active {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .step-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+
+    .form-label {
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 8px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .required {
+      color: var(--danger);
+    }
+
+    .form-control, .form-select {
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 15px;
+      transition: all 0.3s;
+    }
+
+    .form-control:focus, .form-select:focus {
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.1);
+      outline: none;
+    }
+
+    .form-control.error, .form-select.error {
+      border-color: var(--danger);
+    }
+
+    .error-message {
+      color: var(--danger);
+      font-size: 13px;
+      margin-top: 6px;
+      display: none;
+    }
+
+    .error-message.show {
+      display: block;
+    }
+
+    /* YouTube Preview */
+    .youtube-preview-box {
+      background: #f9fafb;
+      border: 2px dashed #e5e7eb;
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      margin-top: 16px;
+      transition: all 0.3s;
+    }
+
+    .youtube-preview-box.has-video {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    }
+
+    .preview-placeholder {
+      color: #9ca3af;
+      font-size: 14px;
+    }
+
+    .youtube-thumbnail {
+      max-width: 100%;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      display: none;
+    }
+
+    .youtube-thumbnail.show {
+      display: block;
+    }
+
+    /* Preview Card */
+    .preview-card {
+      background: #fff;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+      border: 2px solid #e5e7eb;
+    }
+
+    .preview-image {
+      width: 100%;
+      height: 250px;
+      object-fit: cover;
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    }
+
+    .preview-body {
+      padding: 24px;
+    }
+
+    .preview-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #1f2937;
+      margin-bottom: 16px;
+    }
+
+    .preview-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .preview-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--primary-dark);
+    }
+
+    /* Form Actions */
+    .form-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 2px solid #f3f4f6;
+    }
+
+    .btn-next, .btn-prev, .btn-submit, .btn-cancel {
+      flex: 1;
+      border: none;
+      border-radius: 12px;
+      padding: 14px 24px;
+      font-weight: 600;
+      font-size: 15px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+
+    .btn-next, .btn-submit {
+      background: linear-gradient(135deg, var(--primary-light), var(--primary));
+      color: #fff;
+    }
+
+    .btn-next:hover, .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(22, 163, 74, 0.3);
+    }
+
+    .btn-prev {
+      background: #f3f4f6;
+      color: #4b5563;
+    }
+
+    .btn-prev:hover {
+      background: #e5e7eb;
+      transform: translateY(-2px);
+    }
+
+    .btn-cancel {
+      background: #fff;
+      color: #6b7280;
+      border: 2px solid #e5e7eb;
+    }
+
+    .btn-cancel:hover {
+      border-color: #d1d5db;
+      background: #f9fafb;
+    }
+
+    /* Filter Section */
+    .filter-section {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 24px 32px;
+      border-radius: 20px;
+      box-shadow: var(--card-shadow);
+      margin-bottom: 32px;
+      border: 1px solid rgba(255,255,255,0.8);
+    }
+
+    .filter-row {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .filter-group {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .filter-group label {
+      font-weight: 500;
+      color: #374151;
+      margin-bottom: 8px;
+      display: block;
+      font-size: 14px;
+    }
+
+    /* Exercise Grid */
+    .exercise-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 28px;
+      animation: fadeInGrid 0.5s ease-out;
+    }
+
+    @keyframes fadeInGrid {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .exercise-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(255,255,255,0.8);
+      position: relative;
+    }
+
+    .exercise-card:hover {
+      transform: translateY(-8px) scale(1.02);
+      box-shadow: var(--card-shadow-hover);
+    }
+
+    .exercise-image-wrapper {
+      position: relative;
+      width: 100%;
+      height: 220px;
+      overflow: hidden;
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      cursor: pointer;
+    }
+
+    .exercise-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+
+    .exercise-card:hover img {
+      transform: scale(1.1);
+    }
+
+    .youtube-badge {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: rgba(255, 0, 0, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 8px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .category-badge {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 8px 16px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .exercise-card-body {
+      padding: 24px;
+    }
+
+    .exercise-card-body h5 {
+      font-weight: 600;
+      color: #1f2937;
+      font-size: 1.25rem;
+      margin-bottom: 16px;
+      line-height: 1.3;
+    }
+
+    .info-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .info-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--primary-dark);
+      border: 1px solid rgba(22, 163, 74, 0.1);
+    }
+
+    .body-part-badge {
+      background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+      color: #1e40af;
+    }
+    
+    /* --- ส่วนที่เพิ่ม/แก้ไข --- (Style Badge สีเหลืองสำหรับ MET) */
+    .met-badge {
+      background: linear-gradient(135deg, #fef3c7, #fde68a); 
+      color: #92400e;
+    }
+    /* --- จบส่วนที่เพิ่ม/แก้ไข --- */
+
+
+    .card-actions {
+      display: flex;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid #f3f4f6;
+    }
+
+    .btn-edit, .btn-delete {
+      flex: 1;
+      border: none;
+      border-radius: 12px;
+      padding: 12px;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    .btn-edit {
+      background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+      color: #1e40af;
+    }
+
+    .btn-edit:hover {
+      background: linear-gradient(135deg, var(--secondary), #0284c7);
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+    }
+
+    .btn-delete {
+      background: linear-gradient(135deg, #fee2e2, #fecaca);
+      color: #b91c1c;
+    }
+
+    .btn-delete:hover {
+      background: linear-gradient(135deg, var(--danger), #dc2626);
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    .alert {
+      border-radius: 16px;
+      padding: 20px 24px;
+      border: none;
+      font-weight: 500;
+    }
+
+    .alert-info {
+      background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+      color: #1e40af;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(22, 163, 74, 0.3);
+      border-radius: 50%;
+      border-top-color: var(--primary);
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      box-shadow: var(--card-shadow);
+    }
+
+    .empty-state i {
+      font-size: 64px;
+      color: #d1d5db;
+      margin-bottom: 16px;
+    }
+
+    .empty-state h3 {
+      color: #6b7280;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      color: #9ca3af;
+      font-size: 14px;
+    }
+
+    /* Modal */
+    .modal-content {
+      border-radius: 24px;
+      border: none;
+    }
+
+    .modal-header {
+      border-bottom: 2px solid #e5e7eb;
+      border-radius: 24px 24px 0 0;
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      body {
+        padding: 12px;
+      }
+
+      .page-header {
+        padding: 24px;
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .header-content h1 {
+        font-size: 1.5rem;
+      }
+
+      .stats-row {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .btn-add {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .form-section {
+        padding: 24px;
+      }
+
+      .progress-steps {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .progress-steps::before,
+      .progress-line {
+        display: none;
+      }
+
+      .step {
+        flex-direction: row;
+        justify-content: flex-start;
+      }
+
+      .step-circle {
+        margin-bottom: 0;
+        margin-right: 12px;
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+      }
+
+      .step-label {
+        text-align: left;
+      }
+
+      .exercise-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+
+      .filter-row {
+        flex-direction: column;
+      }
+
+      .filter-group {
+        width: 100%;
+      }
+
+      .form-actions {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="main-container">
+    <div class="page-header">
+      <div class="header-content">
+        <h1><span class="header-icon">🏋️‍♂️</span> แนะนำท่าออกกำลังกาย</h1>
+        <p>เพิ่ม แก้ไข และจัดการข้อมูลท่าออกกำลังกายในระบบ</p>
+        <div class="stats-row">
+          <div class="stat-item">
+            <i class="bi bi-collection-fill"></i>
+            <span>ท่าทั้งหมด: <strong id="totalCount">0</strong></span>
+          </div>
+          <div class="stat-item">
+            <i class="bi bi-tags-fill"></i>
+            <span>หมวดหมู่: <strong id="categoryCount">0</strong></span>
+          </div>
+        </div>
+      </div>
+      <button class="btn-add" onclick="toggleAddForm()">
+        <i class="bi bi-plus-circle-fill"></i> เพิ่มท่าใหม่
+      </button>
+    </div>
+
+    <div id="exerciseForm" class="form-section">
+      <div class="form-header">
+        <h4 id="formTitle">✨ เพิ่มท่าออกกำลังกายใหม่</h4>
+        <p>กรอกข้อมูลตามขั้นตอนเพื่อเพิ่มท่าออกกำลังกายใหม่</p>
+      </div>
+
+      <input type="hidden" id="editingId">
+
+      <div class="progress-steps">
+        <div class="progress-line" id="progressLine"></div>
+        <div class="step active" data-step="1">
+          <div class="step-circle">1</div>
+          <div class="step-label">ข้อมูลพื้นฐาน</div>
+        </div>
+        <div class="step" data-step="2">
+          <div class="step-circle">2</div>
+          <div class="step-label">วิดีโอ</div>
+        </div>
+        <div class="step" data-step="3">
+          <div class="step-circle">3</div>
+          <div class="step-label">ตรวจสอบและยืนยัน</div>
+        </div>
+      </div>
+
+      <div class="step-content active" data-step="1">
+        <div class="step-title">
+          <i class="bi bi-info-circle-fill" style="color: var(--primary);"></i>
+          ข้อมูลพื้นฐาน
+        </div>
+
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-card-heading"></i> ชื่อท่าออกกำลังกาย <span class="required">*</span>
+              </label>
+              <input type="text" id="exerciseName" class="form-control" placeholder="เช่น Jumping Jack, Plank, Push Up">
+              <div class="error-message" id="nameError">กรุณากรอกชื่อท่าออกกำลังกาย</div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-tags-fill"></i> หมวดหมู่ <span class="required">*</span>
+              </label>
+              <select id="exerciseCategory" class="form-select">
+                <option value="">เลือกหมวดหมู่</option>
+                <option value="คาร์ดิโอ">🏃‍♀️ คาร์ดิโอ</option>
+                <option value="เวทเทรนนิ่ง">🏋️‍♂️ เวทเทรนนิ่ง</option>
+                <option value="ยืดกล้ามเนื้อ">🤸‍♂️ ยืดกล้ามเนื้อ</option>
+                <option value="โยคะ">🧘‍♀️ โยคะ</option>
+                <option value="HIIT">🔥 HIIT</option>
+              </select>
+              <div class="error-message" id="categoryError">กรุณาเลือกหมวดหมู่</div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-bullseye"></i> ส่วนของร่างกาย <span class="required">*</span>
+              </label>
+              <select id="bodyPart" class="form-select">
+                <option value="">เลือกส่วนของร่างกาย</option>
+                <option value="ท้อง">🎯 ท้อง</option>
+                <option value="แขน">💪 แขน</option>
+                <option value="ขา">🦵 ขา</option>
+                <option value="หลัง">🔙 หลัง</option>
+                <option value="อก">🫁 อก</option>
+                <option value="สะโพก">🍑 สะโพก</option>
+                <option value="ไหล่">⬆️ ไหล่</option>
+                <option value="ทั้งร่างกาย">🏋️ ทั้งร่างกาย</option>
+              </select>
+              <div class="error-message" id="bodyPartError">กรุณาเลือกส่วนของร่างกาย</div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-calculator-fill"></i> ประเภทการคำนวณ (สำหรับแอป) <span class="required">*</span>
+              </label>
+              <select id="inputType" class="form-select">
+                <option value="">เลือกประเภท</option>
+                <option value="time">นับเวลา (เช่น Plank)</option>
+                <option value="reps">นับจำนวนครั้ง (เช่น Push Up)</option>
+                <option value="steps">นับจำนวนก้าว (เช่น Walk)</option>
+              </select>
+              <div class="error-message" id="inputTypeError">กรุณาเลือกประเภทการคำนวณ</div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-tag"></i> หน่วยนับ (ที่แสดงในแอป) <span class="required">*</span>
+              </label>
+              <input type="text" id="unit" class="form-control" placeholder="เช่น นาที, ครั้ง, ก้าว">
+              <div class="error-message" id="unitError">กรุณากรอกหน่วยนับ</div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-lightning-charge-fill"></i> ค่า MET (สำหรับคำนวณ) <span class="required">*</span>
+              </label>
+              <input type="number" step="0.1" id="metValue" class="form-control" placeholder="เช่น 3.8, 4.0, 5.0">
+              <div class="error-message" id="metError">กรุณากรอกค่า MET เป็นตัวเลข</div>
+            </div>
+          </div>
+
+          <div class="col-md-6">
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-arrow-repeat"></i> อัตราแปลง (ต่อ 1 นาที) <span class="required">*</span>
+              </label>
+              <input type="number" step="0.1" id="conversionRate" class="form-control" placeholder="เช่น 1 (ถ้านับนาที), 10 (ถ้า 10 ครั้ง/นาที)">
+              <div class="error-message" id="rateError">กรุณากรอกอัตราแปลง (ห้ามเป็น 0)</div>
+            </div>
+          </div>
+          </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" onclick="cancelForm()">
+            <i class="bi bi-x-circle"></i> ยกเลิก
+          </button>
+          <button type="button" class="btn-next" onclick="nextStep()">
+            ถัดไป <i class="bi bi-arrow-right-circle-fill"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="step-content" data-step="2">
+        <div class="step-title">
+          <i class="bi bi-camera-video-fill" style="color: var(--secondary);"></i>
+          วิดีโอ YouTube
+        </div>
+
+        <div class="row g-3">
+          <div class="col-12">
+            <div class="form-group">
+              <label class="form-label">
+                <i class="bi bi-youtube"></i> ลิงก์ YouTube <span class="required">*</span>
+              </label>
+              <input type="url" id="youtubeUrl" class="form-control" placeholder="https://www.youtube.com/watch?v=..." onchange="previewYoutube()">
+              <div class="error-message" id="youtubeError">กรุณาใส่ลิงก์ YouTube ที่ถูกต้อง</div>
+            </div>
+
+            <div class="youtube-preview-box" id="youtubePreviewBox">
+              <div class="preview-placeholder" id="previewPlaceholder">
+                <i class="bi bi-image" style="font-size: 48px; color: #d1d5db; margin-bottom: 12px;"></i>
+                <p>ตัวอย่างภาพจาก YouTube จะแสดงที่นี่</p>
+              </div>
+              <img id="youtubeThumbnail" class="youtube-thumbnail" alt="YouTube Thumbnail">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-prev" onclick="prevStep()">
+            <i class="bi bi-arrow-left-circle-fill"></i> ย้อนกลับ
+          </button>
+          <button type="button" class="btn-next" onclick="nextStep()">
+            ถัดไป <i class="bi bi-arrow-right-circle-fill"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="step-content" data-step="3">
+        <div class="step-title">
+          <i class="bi bi-eye-fill" style="color: var(--warning);"></i>
+          ตรวจสอบและยืนยัน
+        </div>
+
+        <div class="preview-card">
+          <img id="previewImage" class="preview-image" alt="Preview">
+          <div class="preview-body">
+            <h5 class="preview-title" id="previewName">-</h5>
+            <div class="preview-badges" id="previewBadges">
+              </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-prev" onclick="prevStep()">
+            <i class="bi bi-arrow-left-circle-fill"></i> ย้อนกลับ
+          </button>
+          <button type="button" class="btn-submit" onclick="saveExercise()">
+            <i class="bi bi-check-circle-fill"></i> บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="filter-section">
+      <div class="filter-row">
+        <div class="filter-group">
+          <label>🔍 ค้นหา</label>
+          <input type="text" id="searchInput" class="form-control" placeholder="ค้นหาชื่อท่า..." onkeyup="filterExercises()">
+        </div>
+        <div class="filter-group">
+          <label>🏷️ กรองตามหมวดหมู่</label>
+          <select id="categoryFilter" class="form-select" onchange="filterExercises()">
+            <option value="">ทั้งหมด</option>
+            <option value="คาร์ดิโอ">🏃‍♀️ คาร์ดิโอ</option>
+            <option value="เวทเทรนนิ่ง">🏋️‍♂️ เวทเทรนนิ่ง</option>
+            <option value="ยืดกล้ามเนื้อ">🤸‍♂️ ยืดกล้ามเนื้อ</option>
+            <option value="โยคะ">🧘‍♀️ โยคะ</option>
+            <option value="HIIT">🔥 HIIT</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label>🎯 กรองตามส่วนร่างกาย</label>
+          <select id="bodyPartFilter" class="form-select" onchange="filterExercises()">
+            <option value="">ทั้งหมด</option>
+            <option value="ท้อง">🎯 ท้อง</option>
+            <option value="แขน">💪 แขน</option>
+            <option value="ขา">🦵 ขา</option>
+            <option value="หลัง">🔙 หลัง</option>
+            <option value="อก">🫁 อก</option>
+            <option value="สะโพก">🍑 สะโพก</option>
+            <option value="ไหล่">⬆️ ไหล่</option>
+            <option value="ทั้งร่างกาย">🏋️ ทั้งร่างกาย</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="exerciseList" class="exercise-grid">
+      <div class="alert alert-info">
+        <span class="loading"></span> กำลังโหลดข้อมูล...
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="youtubeModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitle">วิดีโอสอนท่า</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="modalYoutubePlayer"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const exerciseList = document.getElementById("exerciseList");
+    let allExercises = [];
+    let currentStep = 1;
+    let formData = {};
+
+    function toggleAddForm() {
+      const form = document.getElementById("exerciseForm");
+      form.classList.toggle("show");
+      if (form.classList.contains("show")) {
+        resetForm();
+        currentStep = 1;
+        updateStepDisplay();
+      }
+    }
+
+    function cancelForm() {
+      document.getElementById("exerciseForm").classList.remove("show");
+      resetForm();
+    }
+
+    function nextStep() {
+      if (validateStep(currentStep)) {
+        saveStepData();
+        currentStep++;
+        if (currentStep === 3) {
+          updatePreview();
+        }
+        updateStepDisplay();
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 1) {
+        currentStep--;
+        updateStepDisplay();
+      }
+    }
+
+    function updateStepDisplay() {
+      document.querySelectorAll('.step').forEach(step => {
+        const stepNum = parseInt(step.dataset.step);
+        step.classList.remove('active', 'completed');
+        if (stepNum === currentStep) {
+          step.classList.add('active');
+        } else if (stepNum < currentStep) {
+          step.classList.add('completed');
+        }
+      });
+
+      document.querySelectorAll('.step-content').forEach(content => {
+        content.classList.remove('active');
+        if (parseInt(content.dataset.step) === currentStep) {
+          content.classList.add('active');
+        }
+      });
+
+      const progressLine = document.getElementById('progressLine');
+      const progressPercent = ((currentStep - 1) / 2) * 100;
+      progressLine.style.width = progressPercent + '%';
+    }
+
+    function validateStep(step) {
+      if (step === 1) {
+        let isValid = true;
+        
+        // --- ส่วนที่เพิ่ม/แก้ไข --- (เพิ่มการ validate field ใหม่)
+        const fieldsToValidate = [
+          { id: 'exerciseName', errorId: 'nameError' },
+          { id: 'exerciseCategory', errorId: 'categoryError' },
+          { id: 'bodyPart', errorId: 'bodyPartError' },
+          { id: 'inputType', errorId: 'inputTypeError' },
+          { id: 'unit', errorId: 'unitError' },
+          { id: 'metValue', errorId: 'metError' },
+          { id: 'conversionRate', errorId: 'rateError' }
+        ];
+
+        fieldsToValidate.forEach(field => {
+          const input = document.getElementById(field.id);
+          const value = input.value.trim();
+          let fieldInvalid = false;
+
+          if (!value) {
+            fieldInvalid = true;
+          } else if (input.type === 'number' && parseFloat(value) <= 0) {
+            fieldInvalid = true;
+          }
+
+          if (fieldInvalid) {
+            showError(field.id, field.errorId);
+            isValid = false;
+          } else {
+            hideError(field.id, field.errorId);
+          }
+        });
+        // --- จบส่วนที่เพิ่ม/แก้ไข ---
+
+        return isValid;
+
+      } else if (step === 2) {
+        const youtubeUrl = document.getElementById('youtubeUrl').value.trim();
+        if (!youtubeUrl || !getYoutubeId(youtubeUrl)) {
+          showError('youtubeUrl', 'youtubeError');
+          return false;
+        }
+        hideError('youtubeUrl', 'youtubeError');
+        return true;
+      }
+      return true;
+    }
+
+    function showError(inputId, errorId) {
+      document.getElementById(inputId).classList.add('error');
+      document.getElementById(errorId).classList.add('show');
+    }
+
+    function hideError(inputId, errorId) {
+      document.getElementById(inputId).classList.remove('error');
+      document.getElementById(errorId).classList.remove('show');
+    }
+
+    function saveStepData() {
+      if (currentStep === 1) {
+        formData.name = document.getElementById('exerciseName').value.trim();
+        formData.category = document.getElementById('exerciseCategory').value;
+        formData.bodyPart = document.getElementById('bodyPart').value;
+
+        // --- ส่วนที่เพิ่ม/แก้ไข --- (บันทึก field ใหม่ลง formData)
+        formData.inputType = document.getElementById('inputType').value;
+        formData.unit = document.getElementById('unit').value.trim();
+        formData.metValue = parseFloat(document.getElementById('metValue').value) || 0;
+        formData.conversionRate = parseFloat(document.getElementById('conversionRate').value) || 1;
+        // --- จบส่วนที่เพิ่ม/แก้ไข ---
+
+      } else if (currentStep === 2) {
+        formData.youtubeUrl = document.getElementById('youtubeUrl').value.trim();
+      }
+    }
+
+    function updatePreview() {
+      const thumbnailUrl = getYoutubeThumbnail(formData.youtubeUrl);
+      document.getElementById('previewImage').src = thumbnailUrl || 'https://via.placeholder.com/400x300?text=No+Image';
+      document.getElementById('previewName').textContent = formData.name || '-';
+
+      // --- ส่วนที่เพิ่ม/แก้ไข --- (เพิ่ม MET และ Unit ใน Preview)
+      const badgesHtml = `
+        <span class="preview-badge" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe); color: #1e40af;">
+          <i class="bi bi-bullseye"></i> ${formData.bodyPart || '-'}
+        </span>
+        <span class="preview-badge">
+          <i class="bi bi-tags-fill"></i> ${formData.category || '-'}
+        </span>
+        <span class="preview-badge met-badge">
+          <i class="bi bi-lightning-charge-fill"></i> MET: ${formData.metValue || 0}
+        </span>
+        <span class="preview-badge">
+          <i class="bi bi-tag"></i> ${formData.unit || '-'}
+        </span>
+      `;
+      // --- จบส่วนที่เพิ่ม/แก้ไข ---
+      document.getElementById('previewBadges').innerHTML = badgesHtml;
+    }
+
+    function getYoutubeId(url) {
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[2].length === 11) ? match[2] : null;
+    }
+
+    function getYoutubeThumbnail(url) {
+      const videoId = getYoutubeId(url);
+      return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
+    }
+
+    function previewYoutube() {
+      const url = document.getElementById('youtubeUrl').value;
+      const videoId = getYoutubeId(url);
+      const previewBox = document.getElementById('youtubePreviewBox');
+      const thumbnail = document.getElementById('youtubeThumbnail');
+      const placeholder = document.getElementById('previewPlaceholder');
+
+      if (videoId) {
+        const thumbnailUrl = getYoutubeThumbnail(url);
+        thumbnail.src = thumbnailUrl;
+        thumbnail.classList.add('show');
+        placeholder.style.display = 'none';
+        previewBox.classList.add('has-video');
+        hideError('youtubeUrl', 'youtubeError');
+      } else {
+        thumbnail.classList.remove('show');
+        placeholder.style.display = 'block';
+        previewBox.classList.remove('has-video');
+        if (url) {
+          showError('youtubeUrl', 'youtubeError');
+        }
+      }
+    }
+
+    async function loadExercises() {
+      exerciseList.innerHTML = "<div class='alert alert-info'><span class='loading'></span> กำลังโหลดข้อมูล...</div>";
+      try {
+        const snapshot = await db.collection("exercise_guide").orderBy("createdAt", "desc").get();
+        allExercises = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateStats();
+        displayExercises(allExercises);
+      } catch (error) {
+        console.error("Error loading exercises:", error);
+        exerciseList.innerHTML = "<div class='alert alert-warning'>เกิดข้อผิดพลาดในการโหลดข้อมูล</div>";
+      }
+    }
+
+    function updateStats() {
+      document.getElementById("totalCount").textContent = allExercises.length;
+      const categories = [...new Set(allExercises.map(ex => ex.category).filter(Boolean))];
+      document.getElementById("categoryCount").textContent = categories.length;
+    }
+
+    function displayExercises(exercises) {
+      if (exercises.length === 0) {
+        exerciseList.innerHTML = `
+          <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <h3>ยังไม่มีท่าออกกำลังกาย</h3>
+            <p>เริ่มต้นเพิ่มท่าออกกำลังกายแรกของคุณ</p>
+          </div>
+        `;
+        return;
+      }
+      exerciseList.innerHTML = "";
+      exercises.forEach(ex => {
+        const card = document.createElement("div");
+        card.className = "exercise-card";
+        const imageUrl = getYoutubeThumbnail(ex.youtubeUrl) || 'https://via.placeholder.com/400x300?text=No+Image';
+        
+        // --- ส่วนที่เพิ่ม/แก้ไข --- (เพิ่ม MET และ Unit บน Card)
+        card.innerHTML = `
+          <div class="exercise-image-wrapper" onclick="openYoutubeModal('${ex.youtubeUrl || ''}', '${ex.name || 'ไม่มีชื่อ'}')">
+            <img src="${imageUrl}" alt="${ex.name || 'ไม่มีชื่อ'}">
+            ${ex.youtubeUrl ? '<div class="youtube-badge"><i class="bi bi-play-circle-fill"></i> ดูวิดีโอ</div>' : ''}
+            <div class="category-badge">${ex.category || 'ไม่ระบุ'}</div>
+          </div>
+          <div class="exercise-card-body">
+            <h5>${ex.name || 'ไม่มีชื่อ'}</h5>
+            <div class="info-badges">
+              ${ex.bodyPart ? `<span class="info-badge body-part-badge"><i class="bi bi-bullseye"></i> ${ex.bodyPart}</span>` : ''}
+              ${ex.metValue ? `<span class="info-badge met-badge"><i class="bi bi-lightning-charge-fill"></i> MET: ${ex.metValue}</span>` : ''}
+              ${ex.unit ? `<span class="info-badge"><i class="bi bi-tag"></i> ${ex.unit}</span>` : ''}
+            </div>
+            <div class="card-actions">
+              <button class="btn-edit" onclick="editExercise('${ex.id}')">
+                <i class="bi bi-pencil-square"></i> แก้ไข
+              </button>
+              <button class="btn-delete" onclick="deleteExercise('${ex.id}')">
+                <i class="bi bi-trash"></i> ลบ
+              </button>
+            </div>
+          </div>
+        `;
+        // --- จบส่วนที่เพิ่ม/แก้ไข ---
+        exerciseList.appendChild(card);
+      });
+    }
+
+    function openYoutubeModal(url, title) {
+      if (!url) return;
+      const videoId = getYoutubeId(url);
+      if (!videoId) return;
+      
+      document.getElementById("modalTitle").textContent = title;
+      document.getElementById("modalYoutubePlayer").innerHTML = 
+        `<iframe width="100%" height="450" src="https://www.youtube.com/embed/${videoId}" frameborder="0" allowfullscreen></iframe>`;
+      
+      new bootstrap.Modal(document.getElementById('youtubeModal')).show();
+    }
+
+    function filterExercises() {
+      const searchTerm = document.getElementById("searchInput").value.toLowerCase();
+      const categoryFilter = document.getElementById("categoryFilter").value;
+      const bodyPartFilter = document.getElementById("bodyPartFilter").value;
+      
+      let filtered = allExercises;
+      
+      if (searchTerm) {
+        filtered = filtered.filter(ex => 
+          (ex.name && ex.name.toLowerCase().includes(searchTerm))
+        );
+      }
+      
+      if (categoryFilter) {
+        filtered = filtered.filter(ex => ex.category === categoryFilter);
+      }
+      
+      if (bodyPartFilter) {
+        filtered = filtered.filter(ex => ex.bodyPart === bodyPartFilter);
+      }
+      
+      displayExercises(filtered);
+    }
+
+    async function saveExercise() {
+      saveStepData();
+      const id = document.getElementById("editingId").value;
+
+      // --- ส่วนที่เพิ่ม/แก้ไข --- (เพิ่ม field ใหม่ทั้งหมดลงใน data object)
+      const data = {
+        name: formData.name,
+        category: formData.category,
+        bodyPart: formData.bodyPart,
+        youtubeUrl: formData.youtubeUrl,
+        
+        // Fields ที่เพิ่มใหม่
+        inputType: formData.inputType,
+        unit: formData.unit,
+        metValue: formData.metValue,
+        conversionRate: formData.conversionRate,
+
+        updatedAt: new Date()
+      };
+      // --- จบส่วนที่เพิ่ม/แก้ไข ---
+
+      try {
+        if (id) {
+          await db.collection("exercise_guide").doc(id).update(data);
+        } else {
+          data.createdAt = new Date();
+          await db.collection("exercise_guide").add(data);
+        }
+
+        cancelForm();
+        loadExercises();
+      } catch (error) {
+        console.error("Error saving exercise:", error);
+        alert("บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+      }
+    }
+
+    function editExercise(id) {
+      const ex = allExercises.find(e => e.id === id);
+      if (!ex) return;
+      
+      document.getElementById("editingId").value = id;
+      document.getElementById("exerciseName").value = ex.name || "";
+      document.getElementById("exerciseCategory").value = ex.category || "";
+      document.getElementById("bodyPart").value = ex.bodyPart || "";
+      document.getElementById("youtubeUrl").value = ex.youtubeUrl || "";
+      
+      // --- ส่วนที่เพิ่ม/แก้ไข --- (โหลดข้อมูลที่เพิ่มใหม่มาใส่ในฟอร์ม)
+      document.getElementById("inputType").value = ex.inputType || "";
+      document.getElementById("unit").value = ex.unit || "";
+      document.getElementById("metValue").value = ex.metValue || "";
+      document.getElementById("conversionRate").value = ex.conversionRate || 1;
+      // --- จบส่วนที่เพิ่ม/แก้ไข ---
+
+      formData = { ...ex };
+      
+      document.getElementById("formTitle").innerHTML = "✏️ แก้ไขท่าออกกำลังกาย";
+      document.getElementById("exerciseForm").classList.add("show");
+      
+      currentStep = 1;
+      updateStepDisplay();
+      
+      if (ex.youtubeUrl) {
+        previewYoutube();
+      }
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function deleteExercise(id) {
+      if (!confirm("ต้องการลบข้อมูลนี้หรือไม่?")) return;
+      
+      try {
+        await db.collection("exercise_guide").doc(id).delete();
+        loadExercises();
+      } catch (error) {
+        console.error("Error deleting exercise:", error);
+        alert("เกิดข้อผิดพลาดในการลบข้อมูล");
+      }
+    }
+
+    function resetForm() {
+      document.getElementById("editingId").value = "";
+      document.getElementById("exerciseName").value = "";
+      document.getElementById("exerciseCategory").value = "";
+      document.getElementById("bodyPart").value = "";
+      document.getElementById("youtubeUrl").value = "";
+      
+      // --- ส่วนที่เพิ่ม/แก้ไข --- (รีเซ็ตฟอร์มที่เพิ่มใหม่)
+      document.getElementById("inputType").value = "";
+      document.getElementById("unit").value = "";
+      document.getElementById("metValue").value = "";
+      document.getElementById("conversionRate").value = "";
+      // --- จบส่วนที่เพิ่ม/แก้ไข ---
+
+      document.getElementById("youtubeThumbnail").classList.remove("show");
+      document.getElementById("previewPlaceholder").style.display = "block";
+      document.getElementById("youtubePreviewBox").classList.remove("has-video");
+      
+      document.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+      document.querySelectorAll('.error-message').forEach(el => el.classList.remove('show'));
+      
+      formData = {};
+      currentStep = 1;
+      updateStepDisplay();
+      
+      document.getElementById("formTitle").innerHTML = "✨ เพิ่มท่าออกกำลังกายใหม่";
+    }
+
+    document.getElementById('youtubeModal').addEventListener('hidden.bs.modal', function () {
+      document.getElementById("modalYoutubePlayer").innerHTML = "";
+    });
+
+    window.addEventListener("DOMContentLoaded", loadExercises);
+  </script>
+</body>
+</html>

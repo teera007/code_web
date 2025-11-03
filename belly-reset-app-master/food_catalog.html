@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จัดการเมนูอาหาร - Belly Reset</title>
+
+  <!-- 🔐 เพิ่ม Auth Guard -->
+  <script src="auth-guard.js"></script>
+  <script>
+    if (!checkPageAccess('food_catalog')) {
+      // จะ redirect อัตโนมัติถ้าไม่มีสิทธิ์
+    }
+  </script>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.1/firebase-firestore-compat.js"></script>
+  <script src="firebaseConfig.js"></script>
+
+  <!-- Bootstrap + Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- ฟอนต์ -->
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: linear-gradient(135deg, #c7d1ce 0%, #64db7e 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+
+    .container-custom {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .page-header {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 35px 45px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: fadeInDown 0.6s ease-out;
+    }
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .page-header h1 {
+      font-size: 36px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .page-header p {
+      color: #666;
+      margin: 8px 0 0 0;
+      font-size: 15px;
+    }
+    .btn-add-food {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      padding: 14px 32px;
+      border-radius: 14px;
+      color: #fff;
+      font-weight: 600;
+      font-size: 15px;
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+    }
+    .btn-add-food:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+    }
+
+    /* Form Section */
+    .form-section {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 35px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      display: none;
+      animation: slideDown 0.4s ease-out;
+    }
+    .form-section.show {
+      display: block;
+    }
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .form-section .form-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    .form-section h3 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #333;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .form-label {
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    .form-control, .form-select {
+      border: 2px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 13px 18px;
+      font-size: 15px;
+      transition: all 0.3s;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+      outline: none;
+    }
+
+    /* Category Cards */
+    .category-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 20px;
+      margin-bottom: 35px;
+      animation: fadeIn 0.6s ease-out 0.2s both;
+    }
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    .category-card {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 24px 18px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border: 3px solid transparent;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    .category-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: currentColor;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .category-card:hover {
+      transform: translateY(-10px) scale(1.02);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    }
+    .category-card.active {
+      border-color: currentColor;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.25);
+      transform: translateY(-5px);
+    }
+    .category-card.active::before {
+      opacity: 0.05;
+    }
+    .category-card .icon {
+      font-size: 44px;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 3px 6px rgba(0,0,0,0.15));
+      position: relative;
+      z-index: 1;
+    }
+    .category-card .name {
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 6px;
+      position: relative;
+      z-index: 1;
+    }
+    .category-card .count {
+      font-size: 13px;
+      opacity: 0.75;
+      position: relative;
+      z-index: 1;
+    }
+    .category-card.carb { color: #ef4444; }
+    .category-card.protein { color: #3b82f6; }
+    .category-card.vegetable { color: #10b981; }
+    .category-card.fruit { color: #f59e0b; }
+    .category-card.fat { color: #8b5cf6; }
+    .category-card.beverage { color: #06b6d4; }
+    .category-card.snack { color: #ec4899; }
+    .category-card.onedish { color: #dc2626; }
+    .category-card.fastfood { color: #f59e0b; }
+    .category-card.western { color: #8b5cf6; }
+    .category-card.japanese { color: #ef4444; }
+    .category-card.international { color: #14b8a6; }
+    .category-card.breakfast { color: #f97316; }
+    .category-card.other { color: #6b7280; }
+
+    /* Food Grid */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+    }
+    .section-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 3px 12px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-show-all {
+      background: rgba(255, 255, 255, 0.95);
+      border: none;
+      padding: 12px 24px;
+      border-radius: 12px;
+      color: #667eea;
+      font-weight: 600;
+      transition: all 0.3s;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .btn-show-all:hover {
+      background: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+    }
+
+    .food-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 28px;
+      animation: fadeIn 0.6s ease-out 0.4s both;
+    }
+    .food-card {
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+    }
+    .food-card:hover {
+      transform: translateY(-10px) scale(1.02);
+      box-shadow: 0 15px 45px rgba(0,0,0,0.25);
+    }
+    .food-card img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      transition: transform 0.5s;
+    }
+    .food-card:hover img {
+      transform: scale(1.1);
+    }
+    .food-card-body {
+      padding: 24px;
+    }
+    .food-card h5 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #222;
+      margin-bottom: 12px;
+    }
+    .food-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .info-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #555;
+    }
+    .info-badge i {
+      color: #667eea;
+      font-size: 16px;
+    }
+    .nutrition-text {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.7;
+      margin-top: 10px;
+      padding: 12px;
+      background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+      border-radius: 10px;
+      border-left: 3px solid #667eea;
+    }
+    .category-badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      padding: 7px 16px;
+      border-radius: 25px;
+      font-size: 13px;
+      font-weight: 600;
+      background: rgba(255,255,255,0.98);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+    .badge-คาร์โบไฮเดรต { color: #ef4444; border: 2px solid #ef4444; }
+    .badge-โปรตีน { color: #3b82f6; border: 2px solid #3b82f6; }
+    .badge-ผัก { color: #10b981; border: 2px solid #10b981; }
+    .badge-ผลไม้ { color: #f59e0b; border: 2px solid #f59e0b; }
+    .badge-ไขมัน { color: #8b5cf6; border: 2px solid #8b5cf6; }
+    .badge-เครื่องดื่ม { color: #06b6d4; border: 2px solid #06b6d4; }
+    .badge-ของว่าง { color: #ec4899; border: 2px solid #ec4899; }
+    .badge-อาหารจานเดียว { color: #dc2626; border: 2px solid #dc2626; }
+    .badge-ฟาสต์ฟู้ด { color: #f59e0b; border: 2px solid #f59e0b; }
+    .badge-อาหารตะวันตก { color: #8b5cf6; border: 2px solid #8b5cf6; }
+    .badge-อาหารญี่ปุ่น { color: #ef4444; border: 2px solid #ef4444; }
+    .badge-อาหารนานาชาติ { color: #14b8a6; border: 2px solid #14b8a6; }
+    .badge-อาหารเช้า { color: #f97316; border: 2px solid #f97316; }
+    .badge-อื่นๆ { color: #6b7280; border: 2px solid #6b7280; }
+
+    .card-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 18px;
+      padding-top: 18px;
+      border-top: 2px solid #f0f0f0;
+    }
+    .btn-action {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+    }
+    .btn-edit {
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      color: #1e40af;
+    }
+    .btn-edit:hover {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+    .btn-delete {
+      background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+      color: #b91c1c;
+    }
+    .btn-delete:hover {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+
+    /* Buttons */
+    .btn-primary-gradient {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      color: #fff;
+      padding: 13px 32px;
+      border-radius: 12px;
+      font-weight: 600;
+      transition: all 0.3s;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary-gradient:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+    .btn-secondary-outline {
+      background: transparent;
+      border: 2px solid #d1d5db;
+      color: #666;
+      padding: 11px 28px;
+      border-radius: 12px;
+      font-weight: 600;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    .btn-secondary-outline:hover {
+      background: #f3f4f6;
+      border-color: #9ca3af;
+      transform: translateY(-2px);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      body {
+        padding: 20px 15px;
+      }
+      .page-header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+        padding: 25px 30px;
+      }
+      .page-header h1 {
+        font-size: 28px;
+      }
+      .category-grid {
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 15px;
+      }
+      .food-grid {
+        grid-template-columns: 1fr;
+      }
+      .form-section {
+        padding: 25px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container-custom">
+    <div class="page-header">
+      <div>
+        <h1><span>🍽️</span> จัดการเมนูอาหาร</h1>
+        <p>เพิ่ม แก้ไข และจัดการรายการอาหารในระบบ (14 ประเภท)</p>
+      </div>
+      <button class="btn-add-food" onclick="toggleAddForm()">
+        <i class="bi bi-plus-circle-fill"></i> เพิ่มเมนูใหม่
+      </button>
+    </div>
+
+    <div id="addFoodSection" class="form-section">
+      <div class="form-header">
+        <h3 id="formTitle"><span>➕</span> เพิ่มเมนูอาหารใหม่</h3>
+        <button class="btn-secondary-outline" onclick="cancelForm()">
+          <i class="bi bi-x-lg"></i> ปิด
+        </button>
+      </div>
+      
+      <input type="hidden" id="editingId">
+      <div class="row g-3">
+        <div class="col-md-8">
+          <label class="form-label">ชื่ออาหาร <span class="text-danger">*</span></label>
+          <input type="text" id="foodName" class="form-control" placeholder="เช่น ข้าวผัดกุ้ง">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">หมวดหมู่ <span class="text-danger">*</span></label>
+          <select id="foodCategory" class="form-select">
+            <option value="">เลือกหมวดหมู่</option>
+            <option value="คาร์โบไฮเดรต">🍚 คาร์โบไฮเดรต</option>
+            <option value="โปรตีน">🥩 โปรตีน</option>
+            <option value="ผัก">🥬 ผัก</option>
+            <option value="ผลไม้">🍎 ผลไม้</option>
+            <option value="ไขมัน">🥑 ไขมัน</option>
+            <option value="เครื่องดื่ม">🥤 เครื่องดื่ม</option>
+            <option value="ของว่าง">🍪 ของว่าง</option>
+            <option value="อาหารจานเดียว">🍜 อาหารจานเดียว</option>
+            <option value="ฟาสต์ฟู้ด">🥙 ฟาสต์ฟู้ด</option>
+            <option value="อาหารตะวันตก">🍝 อาหารตะวันตก</option>
+            <option value="อาหารญี่ปุ่น">🍱 อาหารญี่ปุ่น</option>
+            <option value="อาหารนานาชาติ">🌮 อาหารนานาชาติ</option>
+            <option value="อาหารเช้า">🥞 อาหารเช้า</option>
+            <option value="อื่นๆ">🍱 อื่นๆ</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">พลังงาน (kcal) <span class="text-danger">*</span></label>
+          <input type="number" id="foodCalories" class="form-control" placeholder="250" min="0">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">หน่วย</label>
+          <input type="text" id="foodUnit" class="form-control" placeholder="จาน, ชาม, ชิ้น, แก้ว">
+        </div>
+        <div class="col-12">
+          <label class="form-label">ข้อมูลโภชนาการ</label>
+          <textarea id="foodNutrition" class="form-control" rows="2" placeholder="โปรตีน 15g, ไขมัน 8g, คาร์โบไฮเดรต 45g"></textarea>
+        </div>
+        <div class="col-12">
+          <label class="form-label">รูปภาพอาหาร</label>
+          <input type="file" id="foodImage" class="form-control" accept="image/*">
+        </div>
+      </div>
+      <div class="mt-4 d-flex gap-3">
+        <button class="btn-primary-gradient" onclick="saveFood()">
+          <i class="bi bi-check-circle-fill"></i> บันทึก
+        </button>
+        <button class="btn-secondary-outline" onclick="cancelForm()">ยกเลิก</button>
+      </div>
+    </div>
+
+    <div class="category-grid">
+      <div class="category-card carb" onclick="filterByCategory('คาร์โบไฮเดรต', this)">
+        <div class="icon">🍚</div>
+        <div class="name">คาร์โบไฮเดรต</div>
+        <div class="count" id="count-คาร์โบไฮเดรต">0 รายการ</div>
+      </div>
+      <div class="category-card protein" onclick="filterByCategory('โปรตีน', this)">
+        <div class="icon">🥩</div>
+        <div class="name">โปรตีน</div>
+        <div class="count" id="count-โปรตีน">0 รายการ</div>
+      </div>
+      <div class="category-card vegetable" onclick="filterByCategory('ผัก', this)">
+        <div class="icon">🥬</div>
+        <div class="name">ผัก</div>
+        <div class="count" id="count-ผัก">0 รายการ</div>
+      </div>
+      <div class="category-card fruit" onclick="filterByCategory('ผลไม้', this)">
+        <div class="icon">🍎</div>
+        <div class="name">ผลไม้</div>
+        <div class="count" id="count-ผลไม้">0 รายการ</div>
+      </div>
+      <div class="category-card fat" onclick="filterByCategory('ไขมัน', this)">
+        <div class="icon">🥑</div>
+        <div class="name">ไขมัน</div>
+        <div class="count" id="count-ไขมัน">0 รายการ</div>
+      </div>
+      <div class="category-card beverage" onclick="filterByCategory('เครื่องดื่ม', this)">
+        <div class="icon">🥤</div>
+        <div class="name">เครื่องดื่ม</div>
+        <div class="count" id="count-เครื่องดื่ม">0 รายการ</div>
+      </div>
+      <div class="category-card snack" onclick="filterByCategory('ของว่าง', this)">
+        <div class="icon">🍪</div>
+        <div class="name">ของว่าง</div>
+        <div class="count" id="count-ของว่าง">0 รายการ</div>
+      </div>
+      <div class="category-card onedish" onclick="filterByCategory('อาหารจานเดียว', this)">
+        <div class="icon">🍜</div>
+        <div class="name">อาหารจานเดียว</div>
+        <div class="count" id="count-อาหารจานเดียว">0 รายการ</div>
+      </div>
+      <div class="category-card fastfood" onclick="filterByCategory('ฟาสต์ฟู้ด', this)">
+        <div class="icon">🥙</div>
+        <div class="name">ฟาสต์ฟู้ด</div>
+        <div class="count" id="count-ฟาสต์ฟู้ด">0 รายการ</div>
+      </div>
+      <div class="category-card western" onclick="filterByCategory('อาหารตะวันตก', this)">
+        <div class="icon">🍝</div>
+        <div class="name">อาหารตะวันตก</div>
+        <div class="count" id="count-อาหารตะวันตก">0 รายการ</div>
+      </div>
+      <div class="category-card japanese" onclick="filterByCategory('อาหารญี่ปุ่น', this)">
+        <div class="icon">🍱</div>
+        <div class="name">อาหารญี่ปุ่น</div>
+        <div class="count" id="count-อาหารญี่ปุ่น">0 รายการ</div>
+      </div>
+      <div class="category-card international" onclick="filterByCategory('อาหารนานาชาติ', this)">
+        <div class="icon">🌮</div>
+        <div class="name">อาหารนานาชาติ</div>
+        <div class="count" id="count-อาหารนานาชาติ">0 รายการ</div>
+      </div>
+      <div class="category-card breakfast" onclick="filterByCategory('อาหารเช้า', this)">
+        <div class="icon">🥞</div>
+        <div class="name">อาหารเช้า</div>
+        <div class="count" id="count-อาหารเช้า">0 รายการ</div>
+      </div>
+      <div class="category-card other" onclick="filterByCategory('อื่นๆ', this)">
+        <div class="icon">🍱</div>
+        <div class="name">อื่นๆ</div>
+        <div class="count" id="count-อื่นๆ">0 รายการ</div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title" id="section-title"><span>📋</span> เมนูอาหารทั้งหมด</div>
+      <button class="btn-show-all" onclick="showAllFoods()" id="showAllBtn" style="display:none;">
+        <i class="bi bi-grid-3x3-gap-fill"></i> แสดงทั้งหมด
+      </button>
+    </div>
+
+    <div id="food-list" class="food-grid">
+      <div class="alert alert-info">⏳ กำลังโหลดเมนูอาหาร...</div>
+    </div>
+  </div>
+
+  <script>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const foodList = document.getElementById("food-list");
+    const cloudName = "dxnxsyduc";
+    const uploadPreset = "unsigned_preset";
+    let allFoods = [];
+    let currentCategory = null;
+
+    function toggleAddForm() {
+      const section = document.getElementById('addFoodSection');
+      section.classList.toggle('show');
+      if (section.classList.contains('show')) {
+        document.getElementById('foodName').focus();
+        setTimeout(() => {
+          section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 100);
+      }
+    }
+
+    function cancelForm() {
+      document.getElementById('addFoodSection').classList.remove('show');
+      resetForm();
+    }
+
+    async function uploadToCloudinary(file) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", uploadPreset);
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+        method: "POST",
+        body: formData
+      });
+      const data = await res.json();
+      if (!data.secure_url) throw new Error("Upload failed");
+      return data.secure_url;
+    }
+
+    async function loadFoods() {
+      foodList.innerHTML = "<div class='alert alert-info' style='grid-column: 1/-1;'>⏳ กำลังโหลด...</div>";
+      try {
+        const snapshot = await db.collection("food_logs").orderBy("createdAt", "desc").get();
+        allFoods = [];
+        snapshot.forEach(doc => {
+          allFoods.push({ id: doc.id, ...doc.data() });
+        });
+        updateCategoryCounts();
+        displayFoods(allFoods);
+      } catch (err) {
+        console.error(err);
+        foodList.innerHTML = "<div class='alert alert-danger' style='grid-column: 1/-1;'>❌ โหลดเมนูอาหารไม่สำเร็จ</div>";
+      }
+    }
+
+    function updateCategoryCounts() {
+      const categories = ['คาร์โบไฮเดรต', 'โปรตีน', 'ผัก', 'ผลไม้', 'ไขมัน', 'เครื่องดื่ม', 'ของว่าง', 'อาหารจานเดียว', 'ฟาสต์ฟู้ด', 'อาหารตะวันตก', 'อาหารญี่ปุ่น', 'อาหารนานาชาติ', 'อาหารเช้า', 'อื่นๆ'];
+      categories.forEach(cat => {
+        const count = allFoods.filter(f => f.category === cat).length;
+        const el = document.getElementById(`count-${cat}`);
+        if (el) el.textContent = `${count} รายการ`;
+      });
+    }
+
+    function displayFoods(foods) {
+      foodList.innerHTML = "";
+      if (foods.length === 0) {
+        foodList.innerHTML = "<div class='alert alert-warning' style='grid-column: 1/-1;'>ไม่พบเมนูอาหาร</div>";
+        return;
+      }
+      
+      foods.forEach(food => {
+        const card = document.createElement("div");
+        card.className = "food-card";
+        card.innerHTML = `
+          <img src="${food.imageUrl || 'https://via.placeholder.com/400x300/667eea/ffffff?text=No+Image'}" alt="${food.foodName}">
+          <span class="category-badge badge-${food.category || ''}">${food.category || 'ไม่ระบุ'}</span>
+          <div class="food-card-body">
+            <h5>${food.foodName}</h5>
+            <div class="food-info">
+              <span class="info-badge"><i class="bi bi-fire"></i> ${food.calories} kcal</span>
+              ${food.unit ? `<span class="info-badge"><i class="bi bi-cup-straw"></i> ${food.unit}</span>` : ''}
+            </div>
+            ${food.nutrition ? `<div class="nutrition-text"><i class="bi bi-heart-pulse"></i> ${food.nutrition}</div>` : ''}
+            <div class="card-actions">
+              <button class="btn-action btn-edit" onclick="editFood('${food.id}')">
+                <i class="bi bi-pencil-square"></i> แก้ไข
+              </button>
+              <button class="btn-action btn-delete" onclick="deleteFood('${food.id}')">
+                <i class="bi bi-trash3-fill"></i> ลบ
+              </button>
+            </div>
+          </div>
+        `;
+        foodList.appendChild(card);
+      });
+    }
+
+    function filterByCategory(category, element) {
+      currentCategory = category;
+      const filtered = allFoods.filter(f => f.category === category);
+      
+      document.querySelectorAll('.category-card').forEach(btn => btn.classList.remove('active'));
+      element.classList.add('active');
+      
+      const icons = {
+        'คาร์โบไฮเดรต': '🍚',
+        'โปรตีน': '🥩',
+        'ผัก': '🥬',
+        'ผลไม้': '🍎',
+        'ไขมัน': '🥑',
+        'เครื่องดื่ม': '🥤',
+        'ของว่าง': '🍪',
+        'อาหารจานเดียว': '🍜',
+        'ฟาสต์ฟู้ด': '🥙',
+        'อาหารตะวันตก': '🍝',
+        'อาหารญี่ปุ่น': '🍱',
+        'อาหารนานาชาติ': '🌮',
+        'อาหารเช้า': '🥞',
+        'อื่นๆ': '🍱'
+      };
+      document.getElementById('section-title').innerHTML = `<span>${icons[category]}</span> ${category}`;
+      document.getElementById('showAllBtn').style.display = 'flex';
+      
+      displayFoods(filtered);
+    }
+
+    function showAllFoods() {
+      currentCategory = null;
+      document.querySelectorAll('.category-card').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('section-title').innerHTML = '<span>📋</span> เมนูอาหารทั้งหมด';
+      document.getElementById('showAllBtn').style.display = 'none';
+      displayFoods(allFoods);
+    }
+
+    async function saveFood() {
+      const editingId = document.getElementById("editingId").value;
+      const foodName = document.getElementById("foodName").value.trim();
+      const calories = parseInt(document.getElementById("foodCalories").value) || 0;
+      const unit = document.getElementById("foodUnit").value.trim();
+      const category = document.getElementById("foodCategory").value.trim();
+      const nutrition = document.getElementById("foodNutrition").value.trim();
+      const file = document.getElementById("foodImage").files[0];
+
+      if (!foodName || !calories || !category) {
+        alert("❌ กรุณากรอกข้อมูลที่จำเป็น (ชื่อ, พลังงาน, หมวดหมู่)");
+        return;
+      }
+
+      try {
+        let imageUrl = "";
+        if (file) {
+          imageUrl = await uploadToCloudinary(file);
+        } else if (editingId) {
+          const existingFood = allFoods.find(f => f.id === editingId);
+          imageUrl = existingFood?.imageUrl || "";
+        }
+
+        const foodData = {
+          foodName, calories, unit, category, nutrition, imageUrl,
+          updatedAt: new Date()
+        };
+
+        if (editingId) {
+          await db.collection("food_logs").doc(editingId).update(foodData);
+        } else {
+          foodData.createdAt = new Date();
+          await db.collection("food_logs").add(foodData);
+        }
+
+        cancelForm();
+        await loadFoods();
+        if (currentCategory) {
+          const categoryCards = document.querySelectorAll('.category-card');
+          categoryCards.forEach(card => {
+            if (card.textContent.includes(currentCategory)) {
+              filterByCategory(currentCategory, card);
+            }
+          });
+        }
+      } catch (err) {
+        console.error("บันทึกเมนูล้มเหลว:", err);
+        alert("❌ บันทึกไม่สำเร็จ กรุณาลองใหม่");
+      }
+    }
+
+    async function editFood(id) {
+      const food = allFoods.find(f => f.id === id);
+      if (!food) return;
+
+      document.getElementById("editingId").value = id;
+      document.getElementById("foodName").value = food.foodName || "";
+      document.getElementById("foodCalories").value = food.calories || "";
+      document.getElementById("foodUnit").value = food.unit || "";
+      document.getElementById("foodCategory").value = food.category || "";
+      document.getElementById("foodNutrition").value = food.nutrition || "";
+
+      document.getElementById("formTitle").innerHTML = '<span>✏️</span> แก้ไขเมนูอาหาร';
+      document.getElementById('addFoodSection').classList.add('show');
+      document.getElementById('foodName').focus();
+      
+      setTimeout(() => {
+        document.getElementById('addFoodSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+
+    async function deleteFood(id) {
+      if (!confirm("❗ คุณแน่ใจหรือไม่ว่าต้องการลบเมนูนี้?")) return;
+      try {
+        await db.collection("food_logs").doc(id).delete();
+        await loadFoods();
+        if (currentCategory) {
+          const categoryCards = document.querySelectorAll('.category-card');
+          categoryCards.forEach(card => {
+            if (card.textContent.includes(currentCategory)) {
+              filterByCategory(currentCategory, card);
+            }
+          });
+        }
+      } catch (err) {
+        console.error("ลบเมนูล้มเหลว:", err); 
+        alert("❌ ลบเมนูไม่สำเร็จ");
+      }
+    }
+
+    function resetForm() {
+      document.getElementById("editingId").value = "";
+      document.getElementById("foodName").value = "";
+      document.getElementById("foodCalories").value = "";
+      document.getElementById("foodUnit").value = "";
+      document.getElementById("foodCategory").value = "";
+      document.getElementById("foodNutrition").value = "";
+      document.getElementById("foodImage").value = "";
+      document.getElementById("formTitle").innerHTML = '<span>➕</span> เพิ่มเมนูอาหารใหม่';
+    }
+
+    window.addEventListener("DOMContentLoaded", loadFoods);
+    setupMenuPermissions(); // ซ่อนเมนูตามสิทธิ์
+  </script>
+</body>
+</html>
